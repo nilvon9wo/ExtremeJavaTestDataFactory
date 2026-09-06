@@ -5,13 +5,13 @@ import java.util.Objects;
 import net.nowhereatall.xfty.Field;
 
 /**
- * A {@link RecordPredicate} satisfied when a record's field equals a fixed
+ * A {@link RecordPredicateLike} satisfied when a record's field equals a fixed
  * value - null included, so {@code of(field, null)} is an "is null" check. Wrap
  * it in {@link NegationPredicate} for "not equal" / "is not null".
  *
  * <p>Obtain one through {@link #of} or the {@link FieldPredicateFactory} facade.
  */
-public final class FieldEqualToPredicate implements RecordPredicate {
+public final class FieldEqualToPredicate implements RecordPredicateLike {
 
     private final Field field;
     private final Object comparisonValue;

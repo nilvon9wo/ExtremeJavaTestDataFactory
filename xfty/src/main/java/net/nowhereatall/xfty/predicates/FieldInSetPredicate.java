@@ -6,12 +6,12 @@ import java.util.Set;
 import net.nowhereatall.xfty.Field;
 
 /**
- * A {@link RecordPredicate} satisfied when a field's value is one of a fixed
+ * A {@link RecordPredicateLike} satisfied when a field's value is one of a fixed
  * set. A null set is treated as empty (nothing matches).
  *
  * <p>Obtain one through {@link #of} or the {@link FieldPredicateFactory} facade.
  */
-public final class FieldInSetPredicate implements RecordPredicate {
+public final class FieldInSetPredicate implements RecordPredicateLike {
 
     private final Field field;
     private final Set<Object> acceptedValues;

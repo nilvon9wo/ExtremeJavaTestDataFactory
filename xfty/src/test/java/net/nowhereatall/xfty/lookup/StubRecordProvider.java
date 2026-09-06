@@ -1,9 +1,9 @@
 package net.nowhereatall.xfty.lookup;
 
-import net.nowhereatall.xfty.core.RecordProvider;
+import net.nowhereatall.xfty.core.RecordProviderLike;
 
 /** A do-nothing provider that only reports its type - enough to test routing. */
-public final class StubRecordProvider implements RecordProvider {
+public final class StubRecordProvider implements RecordProviderLike {
 
     private final Class<?> primaryType;
     private final String label;

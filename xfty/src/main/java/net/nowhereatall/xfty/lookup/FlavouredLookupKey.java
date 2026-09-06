@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.nowhereatall.xfty.predicates.RecordPredicate;
+import net.nowhereatall.xfty.predicates.RecordPredicateLike;
 
 /**
  * Selects a Provider variant by record type and one or more arbitrary
@@ -22,26 +22,26 @@ import net.nowhereatall.xfty.predicates.RecordPredicate;
  * {@link DiscriminatorLookupKey} for the common "match one field's value" case,
  * which enforces that for you.
  */
-public final class FlavouredLookupKey implements LookupKey {
+public final class FlavouredLookupKey implements LookupKeyLike {
 
     private static final Map<String, FlavouredLookupKey> INSTANCE_BY_HASH = new ConcurrentHashMap<>();
 
-    private final TypeLookupKey baseKey;
+    private final LookupKey baseKey;
     private final String flavour;
-    private final List<RecordPredicate> predicates = new ArrayList<>();
+    private final List<RecordPredicateLike> predicates = new ArrayList<>();
 
     private FlavouredLookupKey(Class<?> recordType, String flavour) {
-        this.baseKey = TypeLookupKey.get(recordType);
+        this.baseKey = LookupKey.get(recordType);
         this.flavour = flavour;
     }
 
     public static FlavouredLookupKey get(Class<?> recordType, String flavour) {
-        String hash = hashOf(TypeLookupKey.get(recordType), flavour);
+        String hash = hashOf(LookupKey.get(recordType), flavour);
         return INSTANCE_BY_HASH.computeIfAbsent(hash, ignored -> new FlavouredLookupKey(recordType, flavour));
     }
 
     /** Add a condition the record must satisfy to belong to this flavour. Chainable. */
-    public FlavouredLookupKey matching(RecordPredicate predicate) {
+    public FlavouredLookupKey matching(RecordPredicateLike predicate) {
         this.predicates.add(predicate);
         return this;
     }
@@ -71,7 +71,7 @@ public final class FlavouredLookupKey implements LookupKey {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof LookupKey key && key.hashKey().equals(this.hashKey());
+        return other instanceof LookupKeyLike key && key.hashKey().equals(this.hashKey());
     }
 
     @Override
@@ -84,7 +84,7 @@ public final class FlavouredLookupKey implements LookupKey {
         return "FlavouredLookupKey(" + this.hashKey() + ")";
     }
 
-    private static String hashOf(TypeLookupKey baseKey, String flavour) {
+    private static String hashOf(LookupKey baseKey, String flavour) {
         return baseKey.hashKey() + "::flavour=" + flavour;
     }
 }

@@ -28,7 +28,7 @@ class FlavouredLookupKeyTest {
         FlavouredLookupKey key = FlavouredLookupKey.get(Account.class, "enterprise-x");
 
         // Act / Assert
-        assertTrue(key.specificity() > TypeLookupKey.get(Account.class).specificity());
+        assertTrue(key.specificity() > LookupKey.get(Account.class).specificity());
     }
 
     @Test

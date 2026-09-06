@@ -5,20 +5,20 @@ import java.util.List;
 import net.nowhereatall.xfty.XftyConfigurationException;
 
 /**
- * A {@link RecordPredicate} satisfied when at least one member predicate is
+ * A {@link RecordPredicateLike} satisfied when at least one member predicate is
  * (logical OR). An empty member list is never satisfied.
  *
  * <p>Obtain one through {@link #of} or the {@link PredicateFactory} facade.
  */
-public final class AnyOfPredicate implements RecordPredicate {
+public final class AnyOfPredicate implements RecordPredicateLike {
 
-    private final List<RecordPredicate> members;
+    private final List<RecordPredicateLike> members;
 
-    private AnyOfPredicate(List<RecordPredicate> members) {
+    private AnyOfPredicate(List<RecordPredicateLike> members) {
         this.members = members;
     }
 
-    public static AnyOfPredicate of(List<RecordPredicate> members) {
+    public static AnyOfPredicate of(List<RecordPredicateLike> members) {
         if (members == null) {
             throw new XftyConfigurationException("A predicate list is required.");
         }

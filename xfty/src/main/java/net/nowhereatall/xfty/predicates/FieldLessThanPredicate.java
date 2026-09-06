@@ -3,13 +3,13 @@ package net.nowhereatall.xfty.predicates;
 import net.nowhereatall.xfty.Field;
 
 /**
- * A {@link RecordPredicate} satisfied when a record's field orders strictly
+ * A {@link RecordPredicateLike} satisfied when a record's field orders strictly
  * before a fixed value (see {@link ValueComparison}). A null record, null field
  * value, or null comparison value is never less.
  *
  * <p>Obtain one through {@link #of} or the {@link FieldPredicateFactory} facade.
  */
-public final class FieldLessThanPredicate implements RecordPredicate {
+public final class FieldLessThanPredicate implements RecordPredicateLike {
 
     private final Field field;
     private final Object comparisonValue;

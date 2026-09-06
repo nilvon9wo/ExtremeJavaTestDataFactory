@@ -1,37 +1,70 @@
 package net.nowhereatall.xfty.lookup;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import net.nowhereatall.xfty.XftyConfigurationException;
+
 /**
- * Identifies which Provider variant should generate a particular record.
+ * The default lookup key: a record type and nothing else. Using only this key
+ * reproduces XFTY's original behaviour - exactly one Provider per record type.
  *
- * <p>The default key ({@link TypeLookupKey}) is just a record type, reproducing
- * the original one-Provider-per-type behaviour. A refined key adds a
- * discriminator - arbitrary predicates on the record
- * ({@link FlavouredLookupKey}), or a custom implementation.
- *
- * <p>A single record can match several registered keys, so
- * {@link ProviderLookup#keysFor} returns a set; the most specific match
- * ({@link #specificity()}) wins.
- *
- * <p>Keys are compared by {@link #hashKey()} rather than by identity, so two
- * different instances describing the same variant resolve to the same Provider.
- * Implementations must define {@code equals}/{@code hashCode} in terms of
- * {@code hashKey()}.
+ * <p>Instances are flyweights - obtain them with {@link #get(Class)}, never a
+ * constructor.
  */
-public interface LookupKey {
+public final class LookupKey implements LookupKeyLike {
 
-    /** The record type this key selects a Provider for. */
-    Class<?> recordType();
+    private static final Map<Class<?>, LookupKey> INSTANCE_BY_TYPE = new ConcurrentHashMap<>();
 
-    /**
-     * Whether {@code record} belongs to the variant this key describes. Used to
-     * derive a key from a relationship's override template when none was
-     * supplied explicitly.
-     */
-    boolean isInstanceOf(Object record);
+    private final Class<?> recordType;
 
-    /** Value-equality identity. Two keys with the same hash key are the same key. */
-    String hashKey();
+    private LookupKey(Class<?> recordType) {
+        this.recordType = recordType;
+    }
 
-    /** How specific this key is; higher wins when several keys match one record. Plain type key = 0. */
-    int specificity();
+    public static LookupKey get(Class<?> recordType) {
+        if (recordType == null) {
+            throw new XftyConfigurationException("A lookup key requires a record type.");
+        }
+        return INSTANCE_BY_TYPE.computeIfAbsent(recordType, LookupKey::new);
+    }
+
+    public static LookupKey get(Object record) {
+        return get(record == null ? null : record.getClass());
+    }
+
+    @Override
+    public Class<?> recordType() {
+        return this.recordType;
+    }
+
+    @Override
+    public boolean isInstanceOf(Object record) {
+        return record != null && record.getClass() == this.recordType;
+    }
+
+    @Override
+    public String hashKey() {
+        return this.recordType.toString();
+    }
+
+    @Override
+    public int specificity() {
+        return 0;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof LookupKeyLike key && key.hashKey().equals(this.hashKey());
+    }
+
+    @Override
+    public int hashCode() {
+        return this.hashKey().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "LookupKey(" + this.recordType.getSimpleName() + ")";
+    }
 }

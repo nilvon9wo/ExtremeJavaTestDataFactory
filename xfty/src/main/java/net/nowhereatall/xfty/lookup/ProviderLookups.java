@@ -6,10 +6,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import net.nowhereatall.xfty.core.RecordProvider;
+import net.nowhereatall.xfty.core.RecordProviderLike;
 
 /**
- * The reusable mechanics behind a {@link ProviderLookup}, so a project's own
+ * The reusable mechanics behind a {@link ProviderLookupLike}, so a project's own
  * lookup stays a handful of one-line delegations over an explicit map. Nothing
  * here is stateful and nothing mutates a lookup: you pass a complete map in, you
  * get an answer out.
@@ -22,18 +22,18 @@ public final class ProviderLookups {
     // Resolving a Provider ---------------------------------------------------
 
     /** {@code lookup.get(recordType)}, kept for symmetry with the C# extension method. */
-    public static RecordProvider get(ProviderLookup lookup, Class<?> recordType) {
+    public static RecordProviderLike get(ProviderLookupLike lookup, Class<?> recordType) {
         return lookup.get(recordType);
     }
 
     /** Look up (and lazily instantiate + cache) a Provider for {@code key}. */
-    public static RecordProvider get(
-            Map<LookupKey, Class<? extends RecordProvider>> providerTypeByKey,
-            Map<LookupKey, RecordProvider> instanceCache,
-            LookupKey key) {
+    public static RecordProviderLike get(
+            Map<LookupKeyLike, Class<? extends RecordProviderLike>> providerTypeByKey,
+            Map<LookupKeyLike, RecordProviderLike> instanceCache,
+            LookupKeyLike key) {
         requireKey(key);
         return instanceCache.computeIfAbsent(key, missing -> {
-            Class<? extends RecordProvider> providerType = providerTypeByKey.get(missing);
+            Class<? extends RecordProviderLike> providerType = providerTypeByKey.get(missing);
             if (providerType == null) {
                 throw notRegistered(missing);
             }
@@ -42,9 +42,9 @@ public final class ProviderLookups {
     }
 
     /** Look up an already-constructed Provider for {@code key}. */
-    public static RecordProvider get(Map<LookupKey, RecordProvider> providerByKey, LookupKey key) {
+    public static RecordProviderLike get(Map<LookupKeyLike, RecordProviderLike> providerByKey, LookupKeyLike key) {
         requireKey(key);
-        RecordProvider provider = providerByKey.get(key);
+        RecordProviderLike provider = providerByKey.get(key);
         if (provider == null) {
             throw notRegistered(key);
         }
@@ -54,7 +54,7 @@ public final class ProviderLookups {
     // Deriving a key from a record ------------------------------------------
 
     /** The subset of {@code registeredKeys} whose {@code isInstanceOf(record)} is true. */
-    public static Set<LookupKey> keysFor(Set<LookupKey> registeredKeys, Object record) {
+    public static Set<LookupKeyLike> keysFor(Set<LookupKeyLike> registeredKeys, Object record) {
         if (record == null) {
             throw new LookupException("A record is required to derive a lookup key.");
         }
@@ -69,19 +69,19 @@ public final class ProviderLookups {
      * matched. Two equally-specific matches is an error - the caller must supply
      * an explicit key.
      */
-    public static LookupKey resolve(ProviderLookup providerLookup, Object record) {
-        Set<LookupKey> matches = providerLookup.keysFor(record);
+    public static LookupKeyLike resolve(ProviderLookupLike providerLookup, Object record) {
+        Set<LookupKeyLike> matches = providerLookup.keysFor(record);
         return matches.isEmpty()
-                ? TypeLookupKey.get(record == null ? null : record.getClass())
+                ? LookupKey.get(record == null ? null : record.getClass())
                 : bestOf(matches, record);
     }
 
-    private static LookupKey bestOf(Set<LookupKey> matches, Object record) {
-        int topSpecificity = matches.stream().mapToInt(LookupKey::specificity).max().orElse(0);
-        List<LookupKey> topTier = matches.stream()
+    private static LookupKeyLike bestOf(Set<LookupKeyLike> matches, Object record) {
+        int topSpecificity = matches.stream().mapToInt(LookupKeyLike::specificity).max().orElse(0);
+        List<LookupKeyLike> topTier = matches.stream()
                 .filter(key -> key.specificity() == topSpecificity)
                 .toList();
-        List<String> topTierHashes = topTier.stream().map(LookupKey::hashKey).distinct().toList();
+        List<String> topTierHashes = topTier.stream().map(LookupKeyLike::hashKey).distinct().toList();
         if (topTierHashes.size() > 1) {
             throw new LookupException(
                     "Ambiguous Provider variant for " + typeOf(record) + ": " + String.join(", ", topTierHashes)
@@ -95,7 +95,7 @@ public final class ProviderLookups {
      * and an optional override template - the two ways a caller can name a
      * variant.
      */
-    public static LookupKey reconcile(ProviderLookup providerLookup, LookupKey explicitKey, Object overrideTemplate) {
+    public static LookupKeyLike reconcile(ProviderLookupLike providerLookup, LookupKeyLike explicitKey, Object overrideTemplate) {
         if (explicitKey == null && overrideTemplate == null) {
             return null;
         }
@@ -103,7 +103,7 @@ public final class ProviderLookups {
             return resolve(providerLookup, overrideTemplate);
         }
         if (contradictsTemplate(providerLookup, explicitKey, overrideTemplate)) {
-            LookupKey fromTemplate = resolve(providerLookup, overrideTemplate);
+            LookupKeyLike fromTemplate = resolve(providerLookup, overrideTemplate);
             throw new LookupException(
                     "Explicit variant " + explicitKey.hashKey() + " contradicts the override template, which matches "
                     + fromTemplate.hashKey() + ". Supply only one.");
@@ -111,34 +111,34 @@ public final class ProviderLookups {
         return explicitKey;
     }
 
-    private static boolean contradictsTemplate(ProviderLookup providerLookup, LookupKey explicitKey, Object overrideTemplate) {
+    private static boolean contradictsTemplate(ProviderLookupLike providerLookup, LookupKeyLike explicitKey, Object overrideTemplate) {
         if (overrideTemplate == null) {
             return false;
         }
-        LookupKey fromTemplate = resolve(providerLookup, overrideTemplate);
+        LookupKeyLike fromTemplate = resolve(providerLookup, overrideTemplate);
         return fromTemplate.specificity() > 0 && !fromTemplate.hashKey().equals(explicitKey.hashKey());
     }
 
     // Ready-made map-backed lookups ---------------------------------------
 
     /** A lookup over a complete map of already-constructed Providers. */
-    public static ProviderLookup of(Map<LookupKey, RecordProvider> providerByKey) {
+    public static ProviderLookupLike of(Map<LookupKeyLike, RecordProviderLike> providerByKey) {
         return new MapBackedLookup(null, providerByKey, null);
     }
 
     /** As {@link #of(Map)}, plus the shared-ancestor defaults the Providers rely on. */
-    public static ProviderLookup of(Map<LookupKey, RecordProvider> providerByKey, Map<String, Object> sharedAncestorDefaults) {
+    public static ProviderLookupLike of(Map<LookupKeyLike, RecordProviderLike> providerByKey, Map<String, Object> sharedAncestorDefaults) {
         return new MapBackedLookup(null, providerByKey, sharedAncestorDefaults);
     }
 
     /** A lookup over a complete map of Provider types (instantiated lazily). */
-    public static ProviderLookup ofTypes(Map<LookupKey, Class<? extends RecordProvider>> providerTypeByKey) {
+    public static ProviderLookupLike ofTypes(Map<LookupKeyLike, Class<? extends RecordProviderLike>> providerTypeByKey) {
         return new MapBackedLookup(providerTypeByKey, null, null);
     }
 
     // ---------------------------------------------------------------------
 
-    private static RecordProvider instantiate(Class<? extends RecordProvider> providerType) {
+    private static RecordProviderLike instantiate(Class<? extends RecordProviderLike> providerType) {
         try {
             return providerType.getDeclaredConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
@@ -147,13 +147,13 @@ public final class ProviderLookups {
         }
     }
 
-    private static void requireKey(LookupKey key) {
+    private static void requireKey(LookupKeyLike key) {
         if (key == null) {
             throw new LookupException("A lookup key is required.");
         }
     }
 
-    private static LookupException notRegistered(LookupKey key) {
+    private static LookupException notRegistered(LookupKeyLike key) {
         return new LookupException("No data provider registered for " + key.recordType() + " (key: " + key.hashKey() + ").");
     }
 

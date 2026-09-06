@@ -11,13 +11,13 @@ import net.nowhereatall.xfty.demo.Account;
 import net.nowhereatall.xfty.demo.Contact;
 import org.junit.jupiter.api.Test;
 
-class TypeLookupKeyTest {
+class LookupKeyTest {
 
     @Test
     void internsOneInstancePerRecordType() {
         // Arrange / Act
-        TypeLookupKey first = TypeLookupKey.get(Account.class);
-        TypeLookupKey second = TypeLookupKey.get(Account.class);
+        LookupKey first = LookupKey.get(Account.class);
+        LookupKey second = LookupKey.get(Account.class);
 
         // Assert
         assertSame(first, second);
@@ -26,13 +26,13 @@ class TypeLookupKeyTest {
     @Test
     void hasZeroSpecificity() {
         // Arrange / Act / Assert
-        assertEquals(0, TypeLookupKey.get(Account.class).specificity());
+        assertEquals(0, LookupKey.get(Account.class).specificity());
     }
 
     @Test
     void matchesAnInstanceOfExactlyItsType() {
         // Arrange
-        TypeLookupKey key = TypeLookupKey.get(Contact.class);
+        LookupKey key = LookupKey.get(Contact.class);
         Contact contact = new Contact("c1", "Ada", "L", "a@b.com", "a1");
 
         // Act / Assert
@@ -42,7 +42,7 @@ class TypeLookupKeyTest {
     @Test
     void doesNotMatchADifferentType() {
         // Arrange
-        TypeLookupKey key = TypeLookupKey.get(Contact.class);
+        LookupKey key = LookupKey.get(Contact.class);
 
         // Act / Assert
         assertFalse(key.isInstanceOf(new Account()));
@@ -51,6 +51,6 @@ class TypeLookupKeyTest {
     @Test
     void rejectsANullRecordType() {
         // Act / Assert
-        assertThrows(XftyConfigurationException.class, () -> TypeLookupKey.get((Class<?>) null));
+        assertThrows(XftyConfigurationException.class, () -> LookupKey.get((Class<?>) null));
     }
 }

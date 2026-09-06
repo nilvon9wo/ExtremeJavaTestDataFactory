@@ -10,9 +10,11 @@ package net.nowhereatall.xfty.predicates;
  *
  * <p>See {@link FieldPredicateFactory} for ready-made single-field conditions
  * and {@link PredicateFactory} for AND / OR / NOT combinators.
+ *
+ * <p>(C# {@code IRecordPredicate}.)
  */
 @FunctionalInterface
-public interface RecordPredicate {
+public interface RecordPredicateLike {
 
     boolean isSatisfiedBy(Object record);
 }

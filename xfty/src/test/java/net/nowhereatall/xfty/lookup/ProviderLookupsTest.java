@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import net.nowhereatall.xfty.Field;
-import net.nowhereatall.xfty.core.RecordProvider;
+import net.nowhereatall.xfty.core.RecordProviderLike;
 import net.nowhereatall.xfty.demo.Account;
 import net.nowhereatall.xfty.predicates.FieldPredicateFactory;
 import org.junit.jupiter.api.Test;
@@ -18,15 +18,15 @@ class ProviderLookupsTest {
     @Test
     void resolvesThePlainTypeKeyWhenNothingRefinedMatches() {
         // Arrange
-        ProviderLookup lookup = ProviderLookups.of(Map.of(
-                TypeLookupKey.get(Account.class), new StubRecordProvider(Account.class, "default")));
+        ProviderLookupLike lookup = ProviderLookups.of(Map.of(
+                LookupKey.get(Account.class), new StubRecordProvider(Account.class, "default")));
         Account account = new Account();
 
         // Act
-        LookupKey resolved = ProviderLookups.resolve(lookup, account);
+        LookupKeyLike resolved = ProviderLookups.resolve(lookup, account);
 
         // Assert
-        assertEquals(TypeLookupKey.get(Account.class).hashKey(), resolved.hashKey());
+        assertEquals(LookupKey.get(Account.class).hashKey(), resolved.hashKey());
     }
 
     @Test
@@ -34,15 +34,15 @@ class ProviderLookupsTest {
         // Arrange
         FlavouredLookupKey techKey = FlavouredLookupKey.get(Account.class, "resolve-tech")
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"));
-        Map<LookupKey, RecordProvider> providers = new LinkedHashMap<>();
-        providers.put(TypeLookupKey.get(Account.class), new StubRecordProvider(Account.class, "default"));
+        Map<LookupKeyLike, RecordProviderLike> providers = new LinkedHashMap<>();
+        providers.put(LookupKey.get(Account.class), new StubRecordProvider(Account.class, "default"));
         providers.put(techKey, new StubRecordProvider(Account.class, "tech"));
-        ProviderLookup lookup = ProviderLookups.of(providers);
+        ProviderLookupLike lookup = ProviderLookups.of(providers);
         Account tech = new Account();
         tech.setIndustry("Technology");
 
         // Act
-        LookupKey resolved = ProviderLookups.resolve(lookup, tech);
+        LookupKeyLike resolved = ProviderLookups.resolve(lookup, tech);
 
         // Assert
         assertEquals(techKey.hashKey(), resolved.hashKey());
@@ -55,10 +55,10 @@ class ProviderLookupsTest {
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"));
         FlavouredLookupKey twoKey = FlavouredLookupKey.get(Account.class, "ambiguous-b")
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "active"), true));
-        Map<LookupKey, RecordProvider> providers = new LinkedHashMap<>();
+        Map<LookupKeyLike, RecordProviderLike> providers = new LinkedHashMap<>();
         providers.put(oneKey, new StubRecordProvider(Account.class, "a"));
         providers.put(twoKey, new StubRecordProvider(Account.class, "b"));
-        ProviderLookup lookup = ProviderLookups.of(providers);
+        ProviderLookupLike lookup = ProviderLookups.of(providers);
         Account both = new Account();
         both.setIndustry("Technology");
         both.setActive(true);
@@ -70,10 +70,10 @@ class ProviderLookupsTest {
     @Test
     void reconcileReturnsNullWhenNeitherAKeyNorATemplateIsGiven() {
         // Arrange
-        ProviderLookup lookup = ProviderLookups.of(Map.of());
+        ProviderLookupLike lookup = ProviderLookups.of(Map.of());
 
         // Act
-        LookupKey reconciled = ProviderLookups.reconcile(lookup, null, null);
+        LookupKeyLike reconciled = ProviderLookups.reconcile(lookup, null, null);
 
         // Assert
         assertEquals(null, reconciled);
@@ -84,15 +84,15 @@ class ProviderLookupsTest {
         // Arrange
         FlavouredLookupKey techKey = FlavouredLookupKey.get(Account.class, "reconcile-tech")
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"));
-        Map<LookupKey, RecordProvider> providers = new LinkedHashMap<>();
-        providers.put(TypeLookupKey.get(Account.class), new StubRecordProvider(Account.class, "default"));
+        Map<LookupKeyLike, RecordProviderLike> providers = new LinkedHashMap<>();
+        providers.put(LookupKey.get(Account.class), new StubRecordProvider(Account.class, "default"));
         providers.put(techKey, new StubRecordProvider(Account.class, "tech"));
-        ProviderLookup lookup = ProviderLookups.of(providers);
+        ProviderLookupLike lookup = ProviderLookups.of(providers);
         Account template = new Account();
         template.setIndustry("Technology");
 
         // Act
-        LookupKey reconciled = ProviderLookups.reconcile(lookup, null, template);
+        LookupKeyLike reconciled = ProviderLookups.reconcile(lookup, null, template);
 
         // Assert
         assertEquals(techKey.hashKey(), reconciled.hashKey());
@@ -105,10 +105,10 @@ class ProviderLookupsTest {
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"));
         FlavouredLookupKey financeKey = FlavouredLookupKey.get(Account.class, "contradict-finance")
                 .matching(FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Finance"));
-        Map<LookupKey, RecordProvider> providers = new LinkedHashMap<>();
+        Map<LookupKeyLike, RecordProviderLike> providers = new LinkedHashMap<>();
         providers.put(techKey, new StubRecordProvider(Account.class, "tech"));
         providers.put(financeKey, new StubRecordProvider(Account.class, "finance"));
-        ProviderLookup lookup = ProviderLookups.of(providers);
+        ProviderLookupLike lookup = ProviderLookups.of(providers);
         Account financeTemplate = new Account();
         financeTemplate.setIndustry("Finance");
 
@@ -119,13 +119,13 @@ class ProviderLookupsTest {
     @Test
     void lazilyInstantiatesAProviderRegisteredByTypeAndCachesIt() {
         // Arrange
-        Map<LookupKey, Class<? extends RecordProvider>> byType = Map.of(
-                TypeLookupKey.get(Account.class), StubRecordProvider.class);
-        ProviderLookup lookup = ProviderLookups.ofTypes(byType);
+        Map<LookupKeyLike, Class<? extends RecordProviderLike>> byType = Map.of(
+                LookupKey.get(Account.class), StubRecordProvider.class);
+        ProviderLookupLike lookup = ProviderLookups.ofTypes(byType);
 
         // Act
-        RecordProvider first = lookup.get(Account.class);
-        RecordProvider second = lookup.get(Account.class);
+        RecordProviderLike first = lookup.get(Account.class);
+        RecordProviderLike second = lookup.get(Account.class);
 
         // Assert
         assertSame(first, second);
@@ -134,7 +134,7 @@ class ProviderLookupsTest {
     @Test
     void raisesANamedErrorForAnUnregisteredKey() {
         // Arrange
-        ProviderLookup lookup = ProviderLookups.of(Map.of());
+        ProviderLookupLike lookup = ProviderLookups.of(Map.of());
 
         // Act / Assert
         assertThrows(LookupException.class, () -> lookup.get(Account.class));

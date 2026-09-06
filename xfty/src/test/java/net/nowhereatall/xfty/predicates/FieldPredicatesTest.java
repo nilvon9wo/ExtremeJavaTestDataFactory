@@ -23,7 +23,7 @@ class FieldPredicatesTest {
     @Test
     void equalToMatchesAFieldValue() {
         // Arrange
-        RecordPredicate isTech = FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology");
+        RecordPredicateLike isTech = FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology");
 
         // Act / Assert
         assertTrue(isTech.isSatisfiedBy(account("Technology", 0, null)));
@@ -33,7 +33,7 @@ class FieldPredicatesTest {
     @Test
     void equalToWithNullIsAnIsNullCheck() {
         // Arrange
-        RecordPredicate hasNoIndustry = FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), null);
+        RecordPredicateLike hasNoIndustry = FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), null);
 
         // Act / Assert
         assertTrue(hasNoIndustry.isSatisfiedBy(account(null, 0, null)));
@@ -42,7 +42,7 @@ class FieldPredicatesTest {
     @Test
     void greaterThanComparesNumbersNumerically() {
         // Arrange
-        RecordPredicate bigRevenue = FieldPredicateFactory.greaterThan(
+        RecordPredicateLike bigRevenue = FieldPredicateFactory.greaterThan(
                 Field.of(Account.class, "annualRevenue"), new BigDecimal("1000000"));
 
         // Act / Assert
@@ -53,7 +53,7 @@ class FieldPredicatesTest {
     @Test
     void greaterThanIsNeverTrueForANullFieldValue() {
         // Arrange
-        RecordPredicate bigRevenue = FieldPredicateFactory.greaterThan(
+        RecordPredicateLike bigRevenue = FieldPredicateFactory.greaterThan(
                 Field.of(Account.class, "annualRevenue"), new BigDecimal("1"));
 
         // Act / Assert
@@ -63,7 +63,7 @@ class FieldPredicatesTest {
     @Test
     void inSetMatchesAnyAcceptedValue() {
         // Arrange
-        RecordPredicate favoured = FieldPredicateFactory.inSet(
+        RecordPredicateLike favoured = FieldPredicateFactory.inSet(
                 Field.of(Account.class, "industry"), List.of("Technology", "Healthcare"));
 
         // Act / Assert
@@ -74,7 +74,7 @@ class FieldPredicatesTest {
     @Test
     void negateInvertsThePredicate() {
         // Arrange
-        RecordPredicate notTech = PredicateFactory.negate(
+        RecordPredicateLike notTech = PredicateFactory.negate(
                 FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"));
 
         // Act / Assert
@@ -85,7 +85,7 @@ class FieldPredicatesTest {
     @Test
     void allOfRequiresEveryMember() {
         // Arrange
-        RecordPredicate bigTech = PredicateFactory.allOf(List.of(
+        RecordPredicateLike bigTech = PredicateFactory.allOf(List.of(
                 FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"),
                 FieldPredicateFactory.greaterThan(Field.of(Account.class, "numberOfEmployees"), 100)));
 
@@ -97,7 +97,7 @@ class FieldPredicatesTest {
     @Test
     void anyOfRequiresAtLeastOneMember() {
         // Arrange
-        RecordPredicate techOrHuge = PredicateFactory.anyOf(List.of(
+        RecordPredicateLike techOrHuge = PredicateFactory.anyOf(List.of(
                 FieldPredicateFactory.equalTo(Field.of(Account.class, "industry"), "Technology"),
                 FieldPredicateFactory.greaterThan(Field.of(Account.class, "numberOfEmployees"), 10000)));
 

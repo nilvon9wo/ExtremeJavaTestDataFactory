@@ -23,30 +23,44 @@ for, plus the unavoidable language-shape differences.
   Gradle is not installed on the dev box — the wrapper was bootstrapped from a
   downloaded 8.10.2 distribution and is committed.
 - **Java 17 toolchain.** Records have been stable since 16; `-parameters` is on.
-- Coordinates **`net.nowhereatall:xfty`** / **`net.nowhereatall:xfty-jpa`**,
-  package root `net.nowhereatall.xfty` (prompt decisions 6 & 7). Publishing +
+- Package root **`net.nowhereatall.xfty`** (prompt decision 6), artifacts
+  **`xfty`** / **`xfty-jpa`**. Maven Central groupId is **`io.github.nilvon9wo`**
+  (changed 2026-09-07): the `net.nowhereatall` namespace would need a DNS TXT
+  record proving control of `nowhereatall.net`, and Brian was not sure he
+  controls that domain or how to add the record; `io.github.<user>` is verified
+  automatically against the GitHub account with no DNS. Central verifies the
+  groupId, not the package, so the package name is unaffected. Publishing +
   signing skeleton is in `build.gradle.kts`; the Maven Central OIDC Trusted
   Publishing workflow is not wired yet (next).
 - Test conventions mirror the C# port: one test class per unit, one behaviour
   per method, **literal** `// Arrange` / `// Act` / `// Assert` /
   `// Sanity Check` comments, names adapted to Java (`methodDoesX`).
 
-### Naming: interface/impl collisions
+### Naming: interfaces get an adjective, implementations get the noun
 
-C# uses an `I`-prefix, so `ILookupKey`/`LookupKey` and
-`IRecordProvider`/`RecordProvider` are distinct names where **both halves
-matter**. Java convention drops the `I`, which collides. Resolution — clean
-interface name, descriptive impl name, each rename logged here:
+Brian's rule (stated 2026-09-07, overriding the first draft below): **an
+interface — a role/contract — is named with an adjective; the clean noun is
+left for the implementation.** `-able`/`-ible` where it reads naturally,
+otherwise a `-Like` suffix. Explicitly *against* Clean Code's advice to hide
+interface-ness and give the impl a name like `…Impl` — Brian rejects `Impl`.
 
-| C# | Java | note |
-|----|------|------|
-| `ILookupKey` | `LookupKey` (interface) | |
-| `LookupKey` (concrete) | `TypeLookupKey` | "the default key: a record type and nothing else" |
-| `IProviderLookup` | `ProviderLookup` | |
-| `ProviderLookups` (static) | `ProviderLookups` | already distinct (plural) |
-| `IRecordProvider` | `RecordProvider` (interface) | minimal this pass — see below |
-| `IRecordPredicate` | `RecordPredicate` | |
-| `ISharedAncestorDefaults` | `SharedAncestorDefaults` | |
+So every ported C# `IFoo` becomes Java `FooLike`, and the plain `Foo` is free
+for the concrete type (which, for the collision cases, is exactly the C#
+concrete name):
+
+| C# interface | Java interface | C# concrete → Java concrete |
+|----|----|----|
+| `ILookupKey` | `LookupKeyLike` | `LookupKey` → `LookupKey` (the type-only key) |
+| `IProviderLookup` | `ProviderLookupLike` | — (`MapBackedLookup`) |
+| `IRecordProvider` | `RecordProviderLike` | `RecordProvider` → `RecordProvider` (later; minimal now) |
+| `IRecordPredicate` | `RecordPredicateLike` | — (`FieldEqualToPredicate`, …) |
+| `ISharedAncestorDefaults` | `SharedAncestorDefaultsLike` | — |
+| `IPersistenceGateway` | `PersistenceGatewayLike` | `EfPersistenceGateway` → `JpaPersistenceGateway` |
+| `IUnsetFieldFiller` | `UnsetFieldFillerLike` | (add-on modules, later) |
+
+`ProviderLookups` (the C# static helper class, plural) keeps its name — it is
+not an interface. `FlavouredLookupKey`/`DiscriminatorLookupKey` are unchanged
+(already qualified concrete names).
 
 ### `Field` — the field-token layer (prompt decision 1)
 
@@ -104,10 +118,10 @@ strategy switch, as the prompt requires.
 
 ### Lookup / variant / specificity (prompt decision 3) — ported ~1:1
 
-`TypeLookupKey` (flyweight per `Class`), `FlavouredLookupKey` (flyweight per
+`LookupKey` (flyweight per `Class`), `FlavouredLookupKey` (flyweight per
 type+flavour, predicates not part of identity, `specificity = 20 + predicate
 count`), `DiscriminatorLookupKey` (named convenience over a single
-`equalTo` predicate), `ProviderLookup`, `ProviderLookups` (`resolve` /
+`equalTo` predicate), `ProviderLookupLike`, `ProviderLookups` (`resolve` /
 `bestOf` / `reconcile` / `keysFor` / `of` / `ofTypes`), `MapBackedLookup`.
 Java's `Class` identity via `getClass()` gives the same exact-type-equality
 `GetType()` does, so the specificity tie-break is unchanged. Ambiguous
