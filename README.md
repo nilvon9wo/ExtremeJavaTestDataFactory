@@ -18,10 +18,11 @@ the running port decisions.
 | Record ⇄ bean mutation dispatch (`RecordShape`) | ✅ built + tested |
 | Lookup / variant / specificity system | ✅ built + tested |
 | Predicates | ✅ built + tested |
+| Value expressions (literal, counters, unique tokens) | ✅ built + tested |
 | Generation engine (context-aware values, relationships, bundles) | ⬜ not started |
 | Enrichment | ⬜ not started |
 | `xfty-jpa` persistence binding (H2 + Testcontainers Postgres) | ⬜ scaffolded only |
-| Maven Central publishing (OIDC Trusted Publishing) | ⬜ skeleton only |
+| Maven Central publishing | 🔶 wired (`io.github.nilvon9wo:xfty`); see [docs/publishing.md](docs/publishing.md) |
 
 Java records are a first-class target, fully co-equal with classic mutable
 classes — every place the engine would set a field after construction, a record

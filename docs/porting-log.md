@@ -147,16 +147,65 @@ The full surface (master template, primary target field, bundle creation)
 lands with the generation engine. Flagged so it is not mistaken for the
 finished shape.
 
-### Not started yet
-
-Generation engine (`GenerationContext`, `MasterTemplate`, `RecordFactory`,
-the value/relationship passes), enrichment, deferred/depth-batched
-persistence, `SharedAncestor`, the demo `ProviderLookup`, `xfty-jpa`
-implementation, and the Maven Central OIDC publish workflow.
-
 ### Tests
 
 49 tests, all green (`./gradlew :xfty:test`): `FieldTest` (10),
-`RecordShapeTest` (9), `TypeLookupKeyTest` (5), `FlavouredLookupKeyTest` (6),
+`RecordShapeTest` (9), `LookupKeyTest` (5), `FlavouredLookupKeyTest` (6),
 `DiscriminatorLookupKeyTest` (3), `ProviderLookupsTest` (8),
 `FieldPredicatesTest` (8).
+
+---
+
+## 2026-09-07 — value expressions + Maven Central publishing
+
+### `values/` — the self-contained (non-context) value expressions
+
+`ValueExpressionLike` (C# `IValueExpression`) + `LiteralExpression`,
+`IncrementingDecimalExpression` (C# `decimal` → `BigDecimal`),
+`IncrementingStringExpression` (`SEPARATE_PREFIX`/`DONT_SEPARATE_PREFIX`
+constants kept), `UniqueStringExpression`, `UniqueEmailExpression`,
+`UniqueStringOfLengthExpression` (base-26, recursive, no loop),
+`UniqueAcrossRunsExpression` (run token = 9 digits of epoch-ms + 5 of
+randomness). `ContextAwareExpressionLike` / `DeferredExpressionLike` and their
+`CopyFrom*` implementations are deferred until `GenerationContext` /
+`DeferredGraph` exist, exactly as the C# port deferred them.
+
+- **Deviation, flagged:** the process-static counters use `AtomicInteger`
+  instead of C#'s plain `static int` + `++`. The C# port keeps a plain field
+  and disables xUnit parallelism to match Apex's single-threaded semantics;
+  for these leaf value classes `AtomicInteger` is a zero-behaviour-change
+  idiomatic improvement, so it is used here rather than relying on a
+  test-runner setting. Tests assert *relative* behaviour (counter advances,
+  values differ), never absolute counter values, since the counter is
+  JVM-wide across the whole test run.
+- 10 tests (`ValueExpressionsTest`). 59 total.
+
+### Maven Central — coordinates, bundle, workflows
+
+- Group id `io.github.nilvon9wo` (verified against the GitHub account, no DNS).
+  Package stays `net.nowhereatall.xfty`; artifacts `xfty` / `xfty-jpa`.
+- **`com.gradleup.nmcp.settings` 1.6.2** bundles both modules into one Central
+  Portal deployment (`nmcpPublishAggregationToCentralPortal`). POM carries
+  name/description/url/license/developers/scm; `withSourcesJar()` +
+  `withJavadocJar()`; in-memory PGP signing that only engages when
+  `SIGNING_KEY` is set (so local builds don't need a key).
+- **`.github/workflows/ci.yml`** — `./gradlew build` on push/PR to `main`
+  (Temurin 17, `gradle/actions/setup-gradle`).
+- **`.github/workflows/publish.yml`** — on `v*` tag: build, then bundle +
+  upload as a *draft* deployment (`publishingType = "USER_MANAGED"`), version
+  derived from the tag.
+- **OIDC:** Maven Central has **no trusted-publishing equivalent** to the C#
+  side's NuGet OIDC flow (as of 2026-09 — npm/PyPI/NuGet do, Central went the
+  Sigstore route instead). The Portal upload authenticates with a revocable
+  user token (two repo secrets). `publish.yml` already declares
+  `id-token: write` so the eventual move to keyless Sigstore signing (dropping
+  the PGP secret) is config-only. Full reasoning + the secrets to set:
+  `docs/publishing.md`.
+
+### Still to port
+
+Generation engine (`GenerationContext`, `MasterTemplate`, `RecordFactory`,
+`AncestorGenerator`, `Bundle`, the value/relationship passes, `ChildProvider`,
+`RecordProvider`/`SimpleRecordProvider`, `RecordProvider<T>`), the
+context-aware/deferred expressions, enrichment, `SharedAncestor`, the demo
+`ProviderLookup`, `xfty-jpa`, and keyless signing.

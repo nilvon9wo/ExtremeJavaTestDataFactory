@@ -1,0 +1,48 @@
+name: Publish to Maven Central
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Bundle + upload to Central Portal
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Reserved for a future move to keyless (Sigstore/OIDC) signing - Maven
+      # Central does not yet offer OIDC *trusted publishing* the way NuGet does,
+      # so the Portal upload still authenticates with a token. See
+      # docs/publishing.md for the reasoning and the migration plan.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Derive version from the tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build + test
+        run: ./gradlew build -Pversion=${{ steps.version.outputs.version }} --stacktrace
+
+      - name: Bundle + upload to the Central Portal (draft deployment)
+        run: >
+          ./gradlew nmcpPublishAggregationToCentralPortal
+          -Pversion=${{ steps.version.outputs.version }}
+          --stacktrace
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
