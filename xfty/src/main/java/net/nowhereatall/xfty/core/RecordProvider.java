@@ -36,6 +36,7 @@ public final class RecordProvider<T> {
     private final Class<T> recordType;
     private final ProviderLookupLike providerLookup;
     private final RecordProviderTemplateConfig templateConfig;
+    private final RecordProviderChildConfig childConfig = new RecordProviderChildConfig();
 
     private List<T> overrideTemplateList;
     private LookupKeyLike explicitVariantKey;
@@ -44,6 +45,7 @@ public final class RecordProvider<T> {
     private InsertInclusivity inclusivity = InsertInclusivity.NONE;
     private boolean ancestorCyclesAllowed;
     private boolean excludePrimaryIds;
+    private boolean forceStructuralChildGeneration;
     private PersistenceGatewayLike persistenceGateway;
     private UnsetFieldFillerLike unsetFieldFiller;
     private RecordProviderLike factoryOutlet;
@@ -218,6 +220,30 @@ public final class RecordProvider<T> {
         return this;
     }
 
+    // Downward generation (child collections) -------------------------
+
+    /** Add a fully-configured child collection. Repeatable. */
+    public RecordProvider<T> with(ChildProvider childProvider) {
+        this.childConfig.add(childProvider);
+        return this;
+    }
+
+    /** Shortcut: {@code countPerParent} children on {@code childRelationshipField}, everything else defaulted. */
+    public RecordProvider<T> withChildren(Field childRelationshipField, int countPerParent) {
+        return with(new ChildProvider(childRelationshipField).setQuantity(countPerParent));
+    }
+
+    /** Shortcut: one child on {@code childRelationshipField}. */
+    public RecordProvider<T> withChild(Field childRelationshipField) {
+        return with(new ChildProvider(childRelationshipField));
+    }
+
+    /** Internal: a child of a DEFERRED/depth-batched parent must build its own children structurally too. */
+    public RecordProvider<T> forceStructuralChildGeneration() {
+        this.forceStructuralChildGeneration = true;
+        return this;
+    }
+
     // Path-scoped value overrides -------------------------------------
 
     public RecordProvider<T> putExpression(List<Field> path, ValueExpressionLike valueExpression) {
@@ -251,7 +277,17 @@ public final class RecordProvider<T> {
         warnIfMixingCustomTemplateWithOverrides();
         GenerationContext context = buildContext();
         List<Object> templates = templatesToFill();
-        return generate(context, templates);
+        return generate(context, templates)
+                .thenCompose(bundle -> supplyChildren(bundle).thenApply(ignored -> bundle));
+    }
+
+    private CompletableFuture<Void> supplyChildren(Bundle bundle) {
+        if (!this.childConfig.hasAny()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        RecordProviderExecutionState state = new RecordProviderExecutionState(
+                this.providerLookup, resolveFactoryOutlet(), this.insertMode, this.inclusivity, this.persistenceGateway);
+        return this.childConfig.generateAll(bundle, this.forceStructuralChildGeneration, state);
     }
 
     public CompletableFuture<List<T>> supplyList() {

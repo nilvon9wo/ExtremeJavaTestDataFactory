@@ -134,6 +134,21 @@ class RecordProviderIntegrationTest {
     }
 
     @Test
+    void generatesAChildCollectionWiredBackToEachPrimary() {
+        // Act
+        Bundle bundle = Async.await(new RecordProvider<>(Account.class, this.lookup)
+                .setInsertMode(InsertMode.MOCK)
+                .withChildren(Field.of(Contact.class, "accountId"), 2)
+                .supplyBundle());
+
+        // Assert
+        Account account = bundle.getPrimaries(Account.class).get(0);
+        List<Contact> contacts = bundle.getChildList(Contact.class, Contact.class, "accountId");
+        assertEquals(2, contacts.size());
+        assertTrue(contacts.stream().allMatch(contact -> account.getId().equals(contact.accountId())));
+    }
+
+    @Test
     void aContextAwareAncestorValueCopiesFromTheGeneratedParent() {
         // Act
         Contact contact = Async.await(new RecordProvider<>(Contact.class, this.lookup)

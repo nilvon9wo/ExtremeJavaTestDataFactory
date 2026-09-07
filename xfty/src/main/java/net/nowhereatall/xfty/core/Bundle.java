@@ -11,16 +11,15 @@ import net.nowhereatall.xfty.Field;
 import net.nowhereatall.xfty.SerializableFunction;
 
 /**
- * The record(s) one {@code createBundle} call has produced: primary records plus
- * their generated relationships (parents).
- *
- * <p>(Child collections, the deferred-value queue and enrichment from the C#
- * port are not ported yet.)
+ * The record(s) one {@code createBundle} call has produced: primary records,
+ * their generated relationships (parents), and their generated child
+ * collections.
  */
 public final class Bundle {
 
     private final Map<Field, Bundle> bundleByField = new LinkedHashMap<>();
     private final Map<Field, List<Object>> recordListByField = new LinkedHashMap<>();
+    private final Map<Field, List<BundleChildEntry>> childEntriesByRelationshipField = new LinkedHashMap<>();
 
     private Field primaryTargetField;
 
@@ -122,5 +121,85 @@ public final class Bundle {
         return cannotResolve
                 ? new ArrayList<>()
                 : InverseAlignment.childrenPerParent(ancestors, primaryRecords(), relationshipField).get(ancestorRowIndex);
+    }
+
+    // Child collections -------------------------------------------------
+
+    public Bundle putChild(Field childRelationshipField, Bundle childBundle, List<Integer> parentRowByChildRow) {
+        this.childEntriesByRelationshipField
+                .computeIfAbsent(childRelationshipField, ignored -> new ArrayList<>())
+                .add(new BundleChildEntry(childBundle, parentRowByChildRow));
+        return this;
+    }
+
+    /** Every child relationship field this bundle carries children for. */
+    public Set<Field> childRelationshipFields() {
+        return new LinkedHashSet<>(this.childEntriesByRelationshipField.keySet());
+    }
+
+    /** The configured child collections for a relationship field, in declaration order. */
+    public List<BundleChildEntry> childEntries(Field childRelationshipField) {
+        return this.childEntriesByRelationshipField.getOrDefault(childRelationshipField, new ArrayList<>());
+    }
+
+    /** The sub-bundles for a child relationship field, in config declaration order. */
+    public List<Bundle> childBundles(Field childRelationshipField) {
+        List<Bundle> bundles = new ArrayList<>();
+        for (BundleChildEntry entry : childEntries(childRelationshipField)) {
+            bundles.add(entry.bundle());
+        }
+        return bundles;
+    }
+
+    /** Every child generated for {@code childRelationshipField}, merged across configs. */
+    public List<Object> getChildList(Field childRelationshipField) {
+        List<Object> all = new ArrayList<>();
+        for (Bundle childBundle : childBundles(childRelationshipField)) {
+            if (childBundle.primaryRecords() != null) {
+                all.addAll(childBundle.primaryRecords());
+            }
+        }
+        return all;
+    }
+
+    public <T, R> List<Object> getChildList(SerializableFunction<T, R> childRelationshipField) {
+        return getChildList(Field.of(childRelationshipField));
+    }
+
+    public <R> List<R> getChildList(Class<R> elementType, Class<?> ownerType, String fieldName) {
+        return typed(elementType, getChildList(Field.of(ownerType, fieldName)));
+    }
+
+    /** The first child generated for {@code childRelationshipField}; null if none. */
+    public Object getChild(Field childRelationshipField) {
+        List<Object> all = getChildList(childRelationshipField);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /** Just the children of one primary row - the slice of {@link #getChildList} that belongs to that row. */
+    public List<Object> childRecordsOf(int parentRowIndex, Field childRelationshipField) {
+        List<Object> here = new ArrayList<>();
+        for (BundleChildEntry entry : childEntries(childRelationshipField)) {
+            List<Object> childPrimaries = entry.bundle().primaryRecords();
+            if (childPrimaries == null) {
+                continue;
+            }
+            for (int childRow = 0; childRow < childPrimaries.size(); childRow++) {
+                if (entry.parentRowByChildRow().get(childRow) == parentRowIndex) {
+                    here.add(childPrimaries.get(childRow));
+                }
+            }
+        }
+        return here;
+    }
+
+    /** A single bundle of every child for {@code childRelationshipField}. Null if none. */
+    public Bundle getChildBundle(Field childRelationshipField) {
+        List<Bundle> bundles = childBundles(childRelationshipField);
+        return switch (bundles.size()) {
+            case 0 -> null;
+            case 1 -> bundles.get(0);
+            default -> BundleMerger.combine(bundles);
+        };
     }
 }
