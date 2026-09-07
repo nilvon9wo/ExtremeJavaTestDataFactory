@@ -282,11 +282,39 @@ binding); verb method names; port `Xfty.Test`.
   Postgres tier tagged `docker`** that `assumeTrue`-skips without Docker.
 - **Demo domain** fleshed out to the full C# field set + nav slots, with
   builders on `Account`/`Contact`/`Case`.
-- **`Xfty.Test` translation so far:** predicates (11 files), values (7 plain +
+- **Deferred / depth-batched** ported: `DepthBatchedInserter`,
+  `DeferredInsertBuffer` (+ write-backs, since a resolved record is a new
+  instance), `DeferredInserter`, `DeferredGraph`, `DescendantValuePass`,
+  `CopyFromDescendantExpression`. `PersistenceGatewayLike.insert` now returns
+  the persisted records (same order). `RecordProvider.depthBatched()` +
+  `InsertMode.DEFERRED`.
+- **Enrichment** ported: `InjectConfig`, `BundleEnricher` (the recursive walk),
+  `EnrichmentTarget/Selection/Position`, `ForcedValues`, `RecordInjector`,
+  `InjectionPathResolver` (nav-prop by `<Name>Id` convention + `List<Child>`
+  scan), `QueryableShapeValidator`, `PathKey`. `Bundle.inject*`.
+- **Shared ancestors** ported: `SharedAncestor` (+ `SharedAncestorProvider`,
+  `SharedAncestorResolver`, `SharedRelationshipWiring`). C#'s async reentrant
+  gate → `ReentrantLock` (resolution is synchronous in practice; flagged).
+- **`Xfty.Test` translation so far:** predicates (11), values (7 plain +
   `CopyFromSibling` + `ContextAwareExpression`), lookup (`LookupKeyTest`,
   `DiscriminatorLookupKeyTest`), `InverseAlignment`, `AncestorCycleGuard`,
-  `IdMocker`, `XftyConfigurationException`. 177 tests, 2 skipped (Docker), 0
-  failures.
+  `IdMocker`, `XftyConfigurationException`, `DepthBatchedInserterTest`,
+  `PersistenceGatewayTest`, plus new integration tests (`RecordProviderIntegrationTest`,
+  `DeferredInsertIntegrationTest`, `EnrichmentIntegrationTest`,
+  `SharedAncestorIntegrationTest`). **202 tests, 2 skipped (Docker), 0 failures.**
+
+**Still to translate from `Xfty.Test`:** `Core/*` (BundleTest, MasterTemplateTest,
+PathValueTest, PathTargetValueTest, GenerationContextTest, RecordProviderApiTest,
+RecordProviderScenarioTest, BundleMergerTest, ChildProviderTest,
+ChildProviderOfTTest, DeferredValueQueueTest, UnsetFieldFillerTest,
+RecordProviderOfTTest), `Engine/*` (AncestorCycleTest, RecordFactoryTest),
+`Enrichment/*` unit tests, `Examples/*` (the runnable-doc suite), `Demo/*`,
+remaining `Relationships/*` (`SharedAncestorTest`, `SharedAncestorHierarchyTest`,
+`SharedAncestorResetTest`, `DefaultRelationshipTest` is done), `Lookup/*`
+(`MultiVariantProviderTest`, `VariantResolutionTest`), remaining `Values/*`
+(`CopyFromAncestorExpressionTest`, `CopyFromDescendantExpressionTest`).
+**Then:** `scripts/verify-doc-examples` equivalent + `docs/`; then the other
+`Xfty.*` add-on modules.
 
 **Tests:** `RecordProviderIntegrationTest` (11) - defaults, override-wins,
 mock ids, `NEVER` leaves id unset, required-relationship FK wiring, `NONE`
