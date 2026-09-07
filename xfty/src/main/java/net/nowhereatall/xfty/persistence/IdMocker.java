@@ -33,7 +33,7 @@ public final class IdMocker {
     }
 
     public static Object addId(Object record, Field idField) {
-        return RecordShape.of(record.getClass()).with(record, idField, generateId());
+        return RecordShape.of(record.getClass()).set(record, idField, generateId());
     }
 
     public static String generateId() {

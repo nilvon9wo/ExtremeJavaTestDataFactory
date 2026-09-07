@@ -1,6 +1,7 @@
 package net.nowhereatall.xfty.core;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
 import net.nowhereatall.xfty.engine.RecordFactory;
@@ -41,7 +42,7 @@ public abstract class SimpleRecordProvider implements RecordProviderLike {
     }
 
     @Override
-    public Bundle createBundle(GenerationContext context, List<Object> templateRecords) {
+    public CompletableFuture<Bundle> createBundle(GenerationContext context, List<Object> templateRecords) {
         return RecordFactory.createBundle(context, this.masterTemplate, templateRecords);
     }
 }

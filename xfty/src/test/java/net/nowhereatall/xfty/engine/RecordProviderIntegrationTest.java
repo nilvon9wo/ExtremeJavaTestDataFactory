@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import net.nowhereatall.xfty.Async;
 import net.nowhereatall.xfty.Field;
-import net.nowhereatall.xfty.SerializableFunction;
 import net.nowhereatall.xfty.XftyConfigurationException;
 import net.nowhereatall.xfty.core.Bundle;
 import net.nowhereatall.xfty.core.InsertInclusivity;
@@ -31,7 +31,7 @@ class RecordProviderIntegrationTest {
     @Test
     void suppliesARecordWithTheProvidersDefaultValues() {
         // Act
-        Account account = (Account) new RecordProvider(Account.class, this.lookup).supply();
+        Account account = Async.await(new RecordProvider<>(Account.class, this.lookup).supply());
 
         // Assert
         assertTrue(account.getName().startsWith(AccountDataProvider.DEFAULT_NAME_PREFIX));
@@ -42,9 +42,9 @@ class RecordProviderIntegrationTest {
     @Test
     void anOverrideValueWinsOverTheProvidersDefault() {
         // Act
-        Account account = (Account) new RecordProvider(Account.class, this.lookup)
-                .put((SerializableFunction<Account, String>) Account::getName, "Acme")
-                .supply();
+        Account account = Async.await(new RecordProvider<>(Account.class, this.lookup)
+                .put(Account::getName, "Acme")
+                .supply());
 
         // Assert
         assertEquals("Acme", account.getName());
@@ -53,9 +53,9 @@ class RecordProviderIntegrationTest {
     @Test
     void mockInsertModeAssignsAPlaceholderId() {
         // Act
-        Account account = (Account) new RecordProvider(Account.class, this.lookup)
+        Account account = Async.await(new RecordProvider<>(Account.class, this.lookup)
                 .setInsertMode(InsertMode.MOCK)
-                .supply();
+                .supply());
 
         // Assert
         assertNotNull(account.getId());
@@ -65,7 +65,7 @@ class RecordProviderIntegrationTest {
     @Test
     void neverInsertModeLeavesTheIdUnset() {
         // Act
-        Account account = (Account) new RecordProvider(Account.class, this.lookup).supply();
+        Account account = Async.await(new RecordProvider<>(Account.class, this.lookup).supply());
 
         // Assert
         assertNull(account.getId());
@@ -74,14 +74,14 @@ class RecordProviderIntegrationTest {
     @Test
     void generatesARequiredRelationshipAndWiresTheForeignKey() {
         // Act
-        Bundle bundle = new RecordProvider(Contact.class, this.lookup)
+        Bundle bundle = Async.await(new RecordProvider<>(Contact.class, this.lookup)
                 .setInsertMode(InsertMode.MOCK)
                 .setInclusivity(InsertInclusivity.REQUIRED)
-                .supplyBundle();
+                .supplyBundle());
 
         // Assert
-        Contact contact = (Contact) bundle.primaryRecords().get(0);
-        Account account = (Account) bundle.getList(Field.of(Contact.class, "accountId")).get(0);
+        Contact contact = bundle.getPrimaries(Contact.class).get(0);
+        Account account = bundle.getList(Account.class, Contact.class, "accountId").get(0);
         assertNotNull(account.getId());
         assertEquals(account.getId(), contact.accountId());
     }
@@ -89,10 +89,10 @@ class RecordProviderIntegrationTest {
     @Test
     void inclusivityNoneSkipsTheRequiredRelationship() {
         // Act
-        Contact contact = (Contact) new RecordProvider(Contact.class, this.lookup)
+        Contact contact = Async.await(new RecordProvider<>(Contact.class, this.lookup)
                 .setInsertMode(InsertMode.MOCK)
                 .setInclusivity(InsertInclusivity.NONE)
-                .supply();
+                .supply());
 
         // Assert
         assertNull(contact.accountId());
@@ -101,23 +101,22 @@ class RecordProviderIntegrationTest {
     @Test
     void quantityProducesOneDistinctRecordPerRequested() {
         // Act
-        List<Object> accounts = new RecordProvider(Account.class, this.lookup)
+        List<Account> accounts = Async.await(new RecordProvider<>(Account.class, this.lookup)
                 .setQuantityPerTemplate(3)
-                .supplyList();
+                .supplyList());
 
         // Assert
         assertEquals(3, accounts.size());
-        assertEquals(3, accounts.stream().map(a -> ((Account) a).getName()).distinct().count());
+        assertEquals(3, accounts.stream().map(Account::getName).distinct().count());
     }
 
     @Test
     void aContextAwareSiblingValueReadsAnEarlierField() {
         // Act
-        Account account = (Account) new RecordProvider(Account.class, this.lookup)
-                .put((SerializableFunction<Account, String>) Account::getName, "Globex")
-                .put(Field.of(Account.class, "industry"),
-                        CopyFromSiblingExpression.from((SerializableFunction<Account, String>) Account::getName))
-                .supply();
+        Account account = Async.await(new RecordProvider<>(Account.class, this.lookup)
+                .put(Account::getName, "Globex")
+                .put(Field.of(Account.class, "industry"), CopyFromSiblingExpression.from(Account::getName))
+                .supply());
 
         // Assert
         assertEquals("Globex", account.getIndustry());
@@ -125,27 +124,25 @@ class RecordProviderIntegrationTest {
 
     @Test
     void aContextAwareSiblingValueReadingAStillPendingSiblingThrows() {
-        // Arrange - department reads reportsToId, which is put later; both are context-aware.
-        RecordProvider provider = new RecordProvider(Account.class, this.lookup)
-                .put(Field.of(Account.class, "industry"),
-                        CopyFromSiblingExpression.from((SerializableFunction<Account, String>) Account::getType))
-                .put(Field.of(Account.class, "type"),
-                        CopyFromSiblingExpression.from((SerializableFunction<Account, String>) Account::getIndustry));
+        // Arrange - industry reads type, which is put later; both are context-aware.
+        RecordProvider<Account> provider = new RecordProvider<>(Account.class, this.lookup)
+                .put(Field.of(Account.class, "industry"), CopyFromSiblingExpression.from(Account::getType))
+                .put(Field.of(Account.class, "type"), CopyFromSiblingExpression.from(Account::getIndustry));
 
         // Act / Assert
-        assertThrows(XftyConfigurationException.class, provider::supply);
+        assertThrows(XftyConfigurationException.class, () -> Async.await(provider.supply()));
     }
 
     @Test
     void aContextAwareAncestorValueCopiesFromTheGeneratedParent() {
         // Act
-        Contact contact = (Contact) new RecordProvider(Contact.class, this.lookup)
+        Contact contact = Async.await(new RecordProvider<>(Contact.class, this.lookup)
                 .setInsertMode(InsertMode.MOCK)
                 .setInclusivity(InsertInclusivity.REQUIRED)
                 .put(Field.of(Contact.class, "department"),
                         new CopyFromAncestorExpression(
                                 Field.of(Contact.class, "accountId"), Field.of(Account.class, "name")))
-                .supply();
+                .supply());
 
         // Assert
         assertNotNull(contact.department());

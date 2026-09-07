@@ -20,7 +20,7 @@ class RecordShapeTest {
         RecordShape shape = RecordShape.of(Account.class);
 
         // Act
-        Object result = shape.with(account, Field.of(Account.class, "name"), "Acme");
+        Object result = shape.set(account, Field.of(Account.class, "name"), "Acme");
 
         // Assert
         assertSame(account, result);
@@ -34,7 +34,7 @@ class RecordShapeTest {
         RecordShape shape = RecordShape.of(Account.class);
 
         // Act
-        shape.with(account, Field.of(Account.class, "createdBy"), "seed-job");
+        shape.set(account, Field.of(Account.class, "createdBy"), "seed-job");
 
         // Assert
         assertEquals("seed-job", account.getCreatedBy());
@@ -47,7 +47,7 @@ class RecordShapeTest {
         RecordShape shape = RecordShape.of(Contact.class);
 
         // Act
-        Contact updated = (Contact) shape.with(original, Field.of(Contact.class, "email"), "ada@newmail.com");
+        Contact updated = (Contact) shape.set(original, Field.of(Contact.class, "email"), "ada@newmail.com");
 
         // Assert
         assertNotSame(original, updated);
@@ -63,7 +63,7 @@ class RecordShapeTest {
         RecordShape shape = RecordShape.of(Contact.class);
 
         // Act
-        Contact updated = (Contact) shape.with(original, java.util.Map.of(
+        Contact updated = (Contact) shape.setAll(original, java.util.Map.of(
                 Field.of(Contact.class, "firstName"), "Grace",
                 Field.of(Contact.class, "lastName"), "Hopper"));
 
@@ -121,7 +121,7 @@ class RecordShapeTest {
         RecordShape shape = RecordShape.of(Contact.class);
 
         // Act
-        Contact blank = (Contact) shape.blank();
+        Contact blank = (Contact) shape.instantiate();
 
         // Assert
         assertNull(blank.id());

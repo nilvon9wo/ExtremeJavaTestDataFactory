@@ -40,6 +40,6 @@ public final class PlainValueFiller {
         if (strategy == null || field.get(record) != null) {
             return record;
         }
-        return shape.with(record, field, strategy.get());
+        return shape.set(record, field, strategy.get());
     }
 }

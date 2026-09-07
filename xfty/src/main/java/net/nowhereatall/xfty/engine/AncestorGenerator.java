@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
 import net.nowhereatall.xfty.XftyConfigurationException;
@@ -30,13 +31,19 @@ public final class AncestorGenerator {
         this.template = template;
     }
 
-    public Bundle generate() {
+    public CompletableFuture<Bundle> generate() {
         Bundle bundle = new Bundle();
         Set<Field> forcedHeads = explicitlyRequestedRelationshipHeads();
-        for (Field field : relationshipFields()) {
-            addAncestor(bundle, field, forcedHeads.contains(field));
+        return addRemainingAncestors(bundle, relationshipFields(), forcedHeads).thenApply(ignored -> bundle);
+    }
+
+    private CompletableFuture<Void> addRemainingAncestors(Bundle bundle, List<Field> fields, Set<Field> forcedHeads) {
+        if (fields.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
         }
-        return bundle;
+        Field head = fields.get(0);
+        return addAncestor(bundle, head, forcedHeads.contains(head))
+                .thenCompose(ignored -> addRemainingAncestors(bundle, fields.subList(1, fields.size()), forcedHeads));
     }
 
     private List<Field> relationshipFields() {
@@ -76,22 +83,24 @@ public final class AncestorGenerator {
                 || this.template.optionalRelationshipByField().containsKey(field);
     }
 
-    private void addAncestor(Bundle bundle, Field field, boolean isForced) {
+    private CompletableFuture<Void> addAncestor(Bundle bundle, Field field, boolean isForced) {
         DefaultRelationshipLike relationship = relationshipOn(field);
-        generateAncestor(bundle, field, relationship, isForced);
+        return generateAncestor(bundle, field, relationship, isForced);
     }
 
-    private void generateAncestor(Bundle bundle, Field field, DefaultRelationshipLike relationship, boolean isForced) {
+    private CompletableFuture<Void> generateAncestor(
+            Bundle bundle, Field field, DefaultRelationshipLike relationship, boolean isForced) {
         LookupKeyLike childKey = relationship.resolveLookupKey(this.context.providerLookup());
         assertNoAncestorCycle(field, childKey);
         RecordProviderLike provider = this.context.providerLookup().get(childKey);
         GenerationContext childContext = forcedChildContext(this.context.forRelated(field), isForced)
                 .enteringProviderFor(childKey.hashKey());
         List<Object> templates = clonedTemplatesFor(relationship, this.quantity);
-        Bundle generated = provider.createBundle(childContext, templates);
-        List<Object> primaries = generated.getList(provider.primaryTargetField());
-        bundle.put(field, generated);
-        bundle.put(field, primaries);
+        return provider.createBundle(childContext, templates).thenAccept(generated -> {
+            List<Object> primaries = generated.getList(provider.primaryTargetField());
+            bundle.put(field, generated);
+            bundle.put(field, primaries);
+        });
     }
 
     /**
@@ -116,7 +125,7 @@ public final class AncestorGenerator {
 
     private static List<Object> clonedTemplatesFor(DefaultRelationshipLike relationship, int quantity) {
         Object overrideTemplate = relationship.overrideTemplate();
-        return RecordShape.of(overrideTemplate.getClass()).copies(overrideTemplate, quantity);
+        return RecordShape.of(overrideTemplate.getClass()).copy(overrideTemplate, quantity);
     }
 
     private DefaultRelationshipLike relationshipOn(Field field) {

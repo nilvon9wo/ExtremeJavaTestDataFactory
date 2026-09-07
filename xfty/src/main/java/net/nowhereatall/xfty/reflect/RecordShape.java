@@ -78,13 +78,13 @@ public final class RecordShape {
         return field.get(instance);
     }
 
-    /** Return {@code instance} with {@code field} set to {@code value} - mutated in place for a class, rebuilt for a record. */
-    public Object with(Object instance, Field field, Object value) {
-        return with(instance, Map.of(field, wrapNull(value)));
+    /** Set {@code field} to {@code value}: mutates {@code instance} in place for a class, rebuilds for a record. Returns the resulting instance. */
+    public Object set(Object instance, Field field, Object value) {
+        return setAll(instance, Map.of(field, wrapNull(value)));
     }
 
-    /** As {@link #with(Object, Field, Object)} for several fields at once. */
-    public Object with(Object instance, Map<Field, Object> changes) {
+    /** As {@link #set(Object, Field, Object)} for several fields at once. */
+    public Object setAll(Object instance, Map<Field, Object> changes) {
         requireInstance(instance);
         return this.record
                 ? rebuiltRecord(instance, changes)
@@ -99,8 +99,8 @@ public final class RecordShape {
                 : copiedClass(instance);
     }
 
-    /** {@code quantity} independent copies of {@code instance}. */
-    public List<Object> copies(Object instance, int quantity) {
+    /** Make {@code quantity} independent copies of {@code instance}. */
+    public List<Object> copy(Object instance, int quantity) {
         List<Object> copies = new ArrayList<>(quantity);
         for (int index = 0; index < quantity; index++) {
             copies.add(copy(instance));
@@ -108,8 +108,8 @@ public final class RecordShape {
         return copies;
     }
 
-    /** A new instance with every field at its type default (null / 0 / false). */
-    public Object blank() {
+    /** Instantiate a new value with every field at its type default (null / 0 / false). */
+    public Object instantiate() {
         if (this.record) {
             Object[] defaults = this.components.stream()
                     .map(component -> defaultValue(component.getType()))

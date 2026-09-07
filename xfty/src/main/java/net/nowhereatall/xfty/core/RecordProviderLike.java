@@ -1,6 +1,7 @@
 package net.nowhereatall.xfty.core;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
 
@@ -20,5 +21,5 @@ public interface RecordProviderLike {
     MasterTemplate masterTemplate();
 
     /** Turn this provider's Master Template plus {@code templateRecords} into a wired {@link Bundle}. */
-    Bundle createBundle(GenerationContext context, List<Object> templateRecords);
+    CompletableFuture<Bundle> createBundle(GenerationContext context, List<Object> templateRecords);
 }

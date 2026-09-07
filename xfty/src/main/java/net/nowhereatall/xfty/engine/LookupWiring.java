@@ -50,7 +50,7 @@ public final class LookupWiring {
             return record;
         }
         Object value = readValue(parent, this.relationships.get(field).relatedField());
-        return shape.with(record, field, value);
+        return shape.set(record, field, value);
     }
 
     private Object parentAt(Field field, int row) {

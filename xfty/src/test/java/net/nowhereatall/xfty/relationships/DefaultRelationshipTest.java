@@ -31,7 +31,7 @@ class DefaultRelationshipTest {
         }
 
         @Override
-        public net.nowhereatall.xfty.core.Bundle createBundle(
+        public java.util.concurrent.CompletableFuture<net.nowhereatall.xfty.core.Bundle> createBundle(
                 net.nowhereatall.xfty.core.GenerationContext context, java.util.List<Object> templateRecords) {
             throw new UnsupportedOperationException("routing stub");
         }

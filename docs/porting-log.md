@@ -224,34 +224,34 @@ children/enrichment/deferred-queue omitted), `GenerationContext`,
 `CopyFromSiblingExpression` + `CopyFromAncestorExpression`, and the demo
 `AccountDataProvider`/`ContactDataProvider`/`DefaultProviderLookup`.
 
-**Two structural adaptations, both because a Java record is immutable:**
+**One structural adaptation, because a Java record is immutable:**
 
-1. **Synchronous, not `async`.** The C# port is `Task`-based end to end
-   ("every real backing store already works that way"). Java's persistence
-   world - JPA, JDBC - is synchronous; `CompletableFuture` everywhere would be
-   noise. `PersistenceGatewayLike.insert` returns `void`, `RecordFactory` /
-   `RecordProvider.supply*` are plain calls. The C# port added async in a later
-   pass, so this matches its earlier shape too.
-2. **Passes thread the record through instead of mutating in place.** C#'s
+1. **Passes thread the record through instead of mutating in place.** C#'s
    `PlainValueFiller` / `LookupWiring` / `ContextAwareValuePass` / `IdMocker`
    all do `field.SetValue(record, x)` and rely on later steps seeing it. For a
-   Java record, `RecordShape.with(record, field, x)` returns a *new* instance,
+   Java record, `RecordShape.set(record, field, x)` returns a *new* instance,
    so every pass takes the current record(s), applies its changes, and writes
    the result back to `bundle.putPrimaries(...)`. Within
    `ContextAwareValuePass.completeRow` the per-field context
    (`GenerationContext.recordBeingBuilt`) is re-pointed at the rebuilt instance
    before each next field, so a sibling read always sees current state. One
-   dispatch point (`RecordShape`), no record/bean branching in the passes
-   themselves.
+   dispatch point (`RecordShape`), no record/bean branching in the passes.
 
-**Deferred to later passes** (stubbed or simply absent, as the C# port
-staged them): children (`ChildProvider`, `RecordProvider.with*`),
-`SharedAncestor`/`SharedRelationship` (`PathTargetValue.isSharedRelationship()`
-returns false), deferred/up-flow values + depth-batched insert
-(`DeferredExpressionLike`, `CopyFromDescendantExpression`, `DeferredGraph`,
-`DepthBatchedInserter`, ...), `InsertMode.NOW` real persistence (throws without
-a gateway, as in C#), the typed `MasterTemplate<T>` / `RecordProvider<T>`
-wrappers, and enrichment.
+**Async, matching current C#.** C# XFTY is `Task`-based end to end; the Java
+port is `CompletableFuture`-based - `RecordProviderLike.createBundle`,
+`RecordProvider.supply*`, `RecordFactory.createBundle`,
+`AncestorGenerator.generate`, `PersistenceGatewayLike.insert` return futures;
+`AncestorGenerator`'s recursion chains via `thenCompose`. The synchronous
+passes are synchronous in C# too and stay that way. Not assuming a synchronous
+(JPA/JDBC) persistence model - JPA is only the first binding; other backing
+stores are async. A test helper `Async.await(future)` unwraps
+`CompletionException` so tests assert the real exception type.
+
+**Not yet reached** (being ported next - not "deferred", the goal is
+feature parity with the current C# version): children (`ChildProvider`),
+`SharedAncestor`/`SharedRelationship`, deferred/up-flow + depth-batched insert,
+the typed `MasterTemplate<T>` / `RecordProvider<T>` wrappers, enrichment, and
+the full `Xfty.Test` translation.
 
 **Tests:** `RecordProviderIntegrationTest` (11) - defaults, override-wins,
 mock ids, `NEVER` leaves id unset, required-relationship FK wiring, `NONE`

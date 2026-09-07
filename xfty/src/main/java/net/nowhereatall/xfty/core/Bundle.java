@@ -42,12 +42,44 @@ public final class Bundle {
         return getBundle(Field.of(field));
     }
 
+    public Bundle getBundle(Class<?> recordType, String fieldName) {
+        return getBundle(Field.of(recordType, fieldName));
+    }
+
+    /** The records stored at {@code field}, untyped - the engine's own view. */
     public List<Object> getList(Field field) {
         return this.recordListByField.get(field);
     }
 
-    public <T, R> List<Object> getList(SerializableFunction<T, R> field) {
-        return getList(Field.of(field));
+    /** The records stored at {@code field}, cast to {@code elementType}. */
+    public <R> List<R> getList(Class<R> elementType, Field field) {
+        return typed(elementType, this.recordListByField.get(field));
+    }
+
+    /** {@code getList(elementType, Field.of(ownerType, fieldName))} - name a field without building a token. */
+    public <R> List<R> getList(Class<R> elementType, Class<?> ownerType, String fieldName) {
+        return getList(elementType, Field.of(ownerType, fieldName));
+    }
+
+    /** {@code getList(elementType, Field.of(field))} - name a field by {@code Owner::accessor}. */
+    public <T, F, R> List<R> getList(Class<R> elementType, SerializableFunction<T, F> field) {
+        return getList(elementType, Field.of(field));
+    }
+
+    /** This bundle's primary records, cast to {@code recordType}. */
+    public <R> List<R> getPrimaries(Class<R> recordType) {
+        return typed(recordType, primaryRecords());
+    }
+
+    private static <R> List<R> typed(Class<R> elementType, List<Object> raw) {
+        if (raw == null) {
+            return null;
+        }
+        List<R> typed = new java.util.ArrayList<>(raw.size());
+        for (Object record : raw) {
+            typed.add(elementType.cast(record));
+        }
+        return typed;
     }
 
     /** Read one field several relationship hops up the generated ancestor graph. */

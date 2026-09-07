@@ -1,6 +1,7 @@
 package net.nowhereatall.xfty.lookup;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
 import net.nowhereatall.xfty.core.Bundle;
@@ -42,7 +43,7 @@ public final class StubRecordProvider implements RecordProviderLike {
     }
 
     @Override
-    public Bundle createBundle(GenerationContext context, List<Object> templateRecords) {
+    public CompletableFuture<Bundle> createBundle(GenerationContext context, List<Object> templateRecords) {
         throw new UnsupportedOperationException("routing stub");
     }
 }

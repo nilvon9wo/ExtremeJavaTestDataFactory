@@ -2,6 +2,7 @@ package net.nowhereatall.xfty.engine;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
 import net.nowhereatall.xfty.core.Bundle;
@@ -24,20 +25,21 @@ public final class RecordFactory {
         this.template = PathValueApplier.apply(context.pathValues(), forced);
     }
 
-    public static Bundle createBundle(GenerationContext context, MasterTemplate masterTemplate, List<Object> testTemplates) {
+    public static CompletableFuture<Bundle> createBundle(
+            GenerationContext context, MasterTemplate masterTemplate, List<Object> testTemplates) {
         return new RecordFactory(context, masterTemplate).build(testTemplates);
     }
 
-    private Bundle build(List<Object> testTemplates) {
+    private CompletableFuture<Bundle> build(List<Object> testTemplates) {
         int quantity = testTemplates.size();
-        Bundle bundle = new AncestorGenerator(this.context, quantity, this.template).generate();
-        List<Object> records = PlainValueFiller.cloneAndCompletePlainValues(this.template, testTemplates);
-        bundle.putPrimaries(this.template.primaryTargetField(), records);
-        new LookupWiring(bundle, this.context, this.template).wire();
-        new ContextAwareValuePass(bundle, this.context, this.template).complete();
-        fillUnsetFields(bundle);
-        persist(bundle);
-        return bundle;
+        return new AncestorGenerator(this.context, quantity, this.template).generate().thenCompose(bundle -> {
+            List<Object> records = PlainValueFiller.cloneAndCompletePlainValues(this.template, testTemplates);
+            bundle.putPrimaries(this.template.primaryTargetField(), records);
+            new LookupWiring(bundle, this.context, this.template).wire();
+            new ContextAwareValuePass(bundle, this.context, this.template).complete();
+            fillUnsetFields(bundle);
+            return persist(bundle).thenApply(ignored -> bundle);
+        });
     }
 
     /**
@@ -69,28 +71,29 @@ public final class RecordFactory {
         bundle.putPrimaries(this.template.primaryTargetField(), filled);
     }
 
-    private void persist(Bundle bundle) {
+    private CompletableFuture<Void> persist(Bundle bundle) {
         if (this.context.excludePrimaryIds()) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
         List<Object> records = bundle.primaryRecords();
         Field primaryTargetField = this.template.primaryTargetField();
-        switch (this.context.insertMode()) {
-            case MOCK -> bundle.putPrimaries(primaryTargetField, IdMocker.addIds(records, primaryTargetField));
-            case NOW -> insertNow(records, primaryTargetField);
-            default -> {
-                // NEVER / LATER / DEFERRED - nothing to do here yet.
+        return switch (this.context.insertMode()) {
+            case MOCK -> {
+                bundle.putPrimaries(primaryTargetField, IdMocker.addIds(records, primaryTargetField));
+                yield CompletableFuture.completedFuture(null);
             }
-        }
+            case NOW -> insertNow(records, primaryTargetField);
+            default -> CompletableFuture.completedFuture(null);
+        };
     }
 
-    private void insertNow(List<Object> records, Field primaryTargetField) {
+    private CompletableFuture<Void> insertNow(List<Object> records, Field primaryTargetField) {
         PersistenceGatewayLike gateway = this.context.persistenceGateway();
         if (gateway == null) {
             throw new UnsupportedOperationException(
                     "InsertMode.NOW needs a persistence gateway - RecordProvider.setPersistenceGateway(...) - use "
                     + "MOCK or NEVER when none is configured.");
         }
-        gateway.insert(records, primaryTargetField);
+        return gateway.insert(records, primaryTargetField);
     }
 }

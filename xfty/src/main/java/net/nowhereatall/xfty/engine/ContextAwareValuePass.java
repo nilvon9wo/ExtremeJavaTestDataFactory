@@ -59,6 +59,6 @@ public final class ContextAwareValuePass {
         if (expression == null || field.get(record) != null) {
             return record;
         }
-        return shape.with(record, field, expression.get(scoped));
+        return shape.set(record, field, expression.get(scoped));
     }
 }
