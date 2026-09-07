@@ -17,6 +17,7 @@ import net.nowhereatall.xfty.core.RecordProviderLike;
 import net.nowhereatall.xfty.lookup.LookupKeyLike;
 import net.nowhereatall.xfty.reflect.RecordShape;
 import net.nowhereatall.xfty.relationships.DefaultRelationshipLike;
+import net.nowhereatall.xfty.relationships.SharedRelationshipLike;
 
 /** Generates the ancestor sub-bundle for each relationship the inclusivity covers. */
 public final class AncestorGenerator {
@@ -85,7 +86,27 @@ public final class AncestorGenerator {
 
     private CompletableFuture<Void> addAncestor(Bundle bundle, Field field, boolean isForced) {
         DefaultRelationshipLike relationship = relationshipOn(field);
+        if (relationship instanceof SharedRelationshipLike shared) {
+            assertNoPathValueInto(field);
+            return new SharedRelationshipWiring(this.context, shared).wire(bundle, field, this.quantity);
+        }
         return generateAncestor(bundle, field, relationship, isForced);
+    }
+
+    /**
+     * A put(path, ...) that sets a plain value on a shared ancestor is rejected -
+     * the shared record is resolved once and shared by every child, so a
+     * per-call value has no well-defined meaning.
+     */
+    private void assertNoPathValueInto(Field field) {
+        boolean setsAValueOnTheSharedRecord = this.context.pathValues().stream()
+                .filter(pathValue -> pathValue.head().equals(field) && !pathValue.isSharedRelationshipValue())
+                .anyMatch(pathValue -> !pathValue.isAtTarget() || pathValue.isRelationshipKind());
+        if (setsAValueOnTheSharedRecord) {
+            throw new XftyConfigurationException("put(...) with a path through " + field.name()
+                    + " sets a value on a shared ancestor. Configure the shared record with "
+                    + "SharedAncestor.put(name, ...) instead.");
+        }
     }
 
     private CompletableFuture<Void> generateAncestor(

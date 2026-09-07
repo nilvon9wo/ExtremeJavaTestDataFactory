@@ -48,9 +48,9 @@ public final class PathTargetValue {
                 || this.valueKind == PathTargetValueKind.OPTIONAL_RELATIONSHIP;
     }
 
-    /** True when the value is a shared ancestor. (Shared relationships are not ported yet, so always false.) */
+    /** True when the value is a shared ancestor. */
     public boolean isSharedRelationship() {
-        return false;
+        return this.payload instanceof net.nowhereatall.xfty.relationships.SharedRelationshipLike;
     }
 
     /** Land the value on {@code template.targetField} for the ancestor level being generated. */

@@ -26,11 +26,10 @@ public final class MapBackedLookup implements ProviderLookupLike, SharedAncestor
 
     @Override
     public void registerSharedAncestorDefaults() {
-        if (this.sharedAncestorDefaults == null || this.sharedAncestorDefaults.isEmpty()) {
+        if (this.sharedAncestorDefaults == null) {
             return;
         }
-        throw new UnsupportedOperationException(
-                "Shared-ancestor defaults are declared on this lookup but the shared-ancestor subsystem is not ported yet.");
+        this.sharedAncestorDefaults.forEach(net.nowhereatall.xfty.relationships.SharedAncestor::putIfAbsent);
     }
 
     @Override

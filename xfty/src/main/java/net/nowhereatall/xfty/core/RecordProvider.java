@@ -285,10 +285,14 @@ public final class RecordProvider<T> {
 
     public CompletableFuture<Bundle> supplyBundle() {
         warnIfMixingCustomTemplateWithOverrides();
-        GenerationContext context = buildContext();
-        List<Object> templates = templatesToFill();
-        return generate(context, templates)
-                .thenCompose(bundle -> supplyChildrenAndPersist(bundle).thenApply(ignored -> bundle));
+        return net.nowhereatall.xfty.engine.SharedAncestorResolver
+                .resolveAllConfigured(this.providerLookup, this.insertMode)
+                .thenCompose(ignored -> {
+                    GenerationContext context = buildContext();
+                    List<Object> templates = templatesToFill();
+                    return generate(context, templates)
+                            .thenCompose(bundle -> supplyChildrenAndPersist(bundle).thenApply(unused -> bundle));
+                });
     }
 
     private CompletableFuture<Void> supplyChildrenAndPersist(Bundle bundle) {
