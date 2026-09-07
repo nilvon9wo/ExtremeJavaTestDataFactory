@@ -256,17 +256,17 @@ public final class RecordProvider<T> {
 
     // Path-scoped value overrides -------------------------------------
 
-    public RecordProvider<T> putExpression(List<Field> path, ValueExpressionLike valueExpression) {
+    public RecordProvider<T> put(List<Field> path, ValueExpressionLike valueExpression) {
         this.templateConfig.addPathValue(PathValue.ofExpression(path, valueExpression));
         return this;
     }
 
-    public RecordProvider<T> putContextAware(List<Field> path, ContextAwareExpressionLike contextAwareExpression) {
+    public RecordProvider<T> put(List<Field> path, ContextAwareExpressionLike contextAwareExpression) {
         this.templateConfig.addPathValue(PathValue.ofContextAware(path, contextAwareExpression));
         return this;
     }
 
-    public RecordProvider<T> putLiteral(List<Field> path, Object literal) {
+    public RecordProvider<T> put(List<Field> path, Object literal) {
         this.templateConfig.addPathValue(PathValue.ofLiteral(path, literal));
         return this;
     }
