@@ -40,11 +40,39 @@ allows:
 |---|---|
 | `MAVEN_CENTRAL_USERNAME` | Portal token *username* — [central.sonatype.com](https://central.sonatype.com/) → your name → **View Account** → **Generate User Token** |
 | `MAVEN_CENTRAL_PASSWORD` | Portal token *password* from the same screen |
-| `GPG_SIGNING_KEY` | ASCII-armored private key: `gpg --armor --export-secret-keys <KEYID>` (whole block, including the BEGIN/END lines) |
-| `GPG_SIGNING_PASSWORD` | passphrase for that key (empty string if none) |
+| `GPG_SIGNING_KEY` | ASCII-armored private signing key (whole block, BEGIN/END lines included) |
+| `GPG_SIGNING_PASSWORD` | passphrase for that key (empty string if the key has none) |
 
-The public half of the GPG key must be pushed to a keyserver
-(`gpg --keyserver keyserver.ubuntu.com --send-keys <KEYID>`).
+### Generating the signing key
+
+`gpg`'s interactive key generation needs a TTY. Non-interactively (a
+passphrase-less key is fine for CI — the armored key block is itself the
+secret, stored encrypted in GitHub):
+
+```bash
+gpg --batch --generate-key <<'EOF'
+%no-protection
+Key-Type: RSA
+Key-Length: 4096
+Key-Usage: sign
+Name-Real: Brian Kessler
+Name-Email: kessler.bm@gmail.com
+Expire-Date: 2y
+%commit
+EOF
+
+gpg --list-secret-keys --keyid-format=long   # the KEYID is after "rsa4096/" on the sec line
+gpg --armor --export-secret-keys <KEYID>     # -> GPG_SIGNING_KEY  (GPG_SIGNING_PASSWORD = "")
+gpg --keyserver keyserver.ubuntu.com --send-keys <KEYID>   # Central verifies against this
+gpg --keyserver keys.openpgp.org       --send-keys <KEYID>
+```
+
+A key for `kessler.bm@gmail.com` was generated 2026-09-07 —
+`KEYID C99DEF09A10CEB64`, fingerprint
+`42F2D29F333E672C7ADD784BC99DEF09A10CEB64`, no passphrase, expires 2028-09-06,
+public half already sent to `keyserver.ubuntu.com` and `keys.openpgp.org`.
+Signing was verified end to end (`publishToMavenLocal` emits every required
+`.asc`).
 
 ## How a release happens
 
