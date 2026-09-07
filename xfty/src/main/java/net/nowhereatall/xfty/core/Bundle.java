@@ -205,6 +205,32 @@ public final class Bundle {
         return here;
     }
 
+    // Enrichment -------------------------------------------------------
+
+    /**
+     * New instances of the records at {@code getList(field)}, enriched per config
+     * - populated parent relationships, child collections, forced scalars - so
+     * code under test reads them straight off the record. Originals untouched.
+     */
+    public List<Object> inject(Field field, net.nowhereatall.xfty.enrichment.InjectConfig config) {
+        return net.nowhereatall.xfty.enrichment.BundleEnricher.enrich(this, field, config);
+    }
+
+    /** Inject with everything the graph holds; throws if there is nothing to inject. */
+    public List<Object> injectAll(Field field) {
+        return net.nowhereatall.xfty.enrichment.BundleEnricher.enrichEverything(this, field);
+    }
+
+    /** Inject with every generated ancestor; children only if the config names them. */
+    public List<Object> injectAllParents(Field field) {
+        return inject(field, net.nowhereatall.xfty.enrichment.InjectConfig.allParents());
+    }
+
+    /** Inject with every generated child collection; parents only if the config names them. */
+    public List<Object> injectAllChildren(Field field) {
+        return inject(field, net.nowhereatall.xfty.enrichment.InjectConfig.allChildren());
+    }
+
     /** A single bundle of every child for {@code childRelationshipField}. Null if none. */
     public Bundle getChildBundle(Field childRelationshipField) {
         List<Bundle> bundles = childBundles(childRelationshipField);

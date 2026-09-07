@@ -24,7 +24,7 @@ the running port decisions.
 | `InsertMode.NOW` real persistence + `xfty-jpa` (H2 tier + Testcontainers Postgres tier) | ✅ built + tested |
 | Deferred / depth-batched insert (`InsertMode.DEFERRED`, `.depthBatched()`, up-flow values) | ✅ built + tested |
 | Shared ancestors | ⬜ not started |
-| Enrichment | ⬜ not started |
+| Enrichment (`bundle.inject(...)` / `injectAll` - relationship + child-collection + scalar injection via reflection) | ✅ built + tested |
 | Maven Central publishing | 🔶 wired (`io.github.nilvon9wo:xfty`); see [docs/publishing.md](docs/publishing.md) |
 
 Java records are a first-class target, fully co-equal with classic mutable
