@@ -33,6 +33,11 @@ public final class MasterTemplate {
         this(primaryTargetField, new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
 
+    /** Start a template, naming the primary target field by {@code Type::accessor}. */
+    public static <T, R> MasterTemplate of(SerializableFunction<T, R> primaryTargetField) {
+        return new MasterTemplate(Field.of(primaryTargetField));
+    }
+
     private MasterTemplate(
             Field primaryTargetField,
             Map<Field, ValueExpressionLike> defaultByField,

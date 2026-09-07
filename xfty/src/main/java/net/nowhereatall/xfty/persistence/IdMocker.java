@@ -32,6 +32,15 @@ public final class IdMocker {
         return withIds;
     }
 
+    /** As {@link #addIds(List, Field)} for a batch mixing several record types - each record's own "id" field is resolved. */
+    public static List<Object> addIds(List<Object> records) {
+        List<Object> withIds = new ArrayList<>(records.size());
+        for (Object record : records) {
+            withIds.add(addId(record, Field.of(record.getClass(), "id")));
+        }
+        return withIds;
+    }
+
     public static Object addId(Object record, Field idField) {
         return RecordShape.of(record.getClass()).set(record, idField, generateId());
     }
