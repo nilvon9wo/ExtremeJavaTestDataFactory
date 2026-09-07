@@ -33,7 +33,7 @@ class LookupKeyTest {
     void matchesAnInstanceOfExactlyItsType() {
         // Arrange
         LookupKey key = LookupKey.get(Contact.class);
-        Contact contact = new Contact("c1", "Ada", "L", "a@b.com", "a1");
+        Contact contact = Contact.builder().id("c1").firstName("Ada").lastName("L").email("a@b.com").accountId("a1").build();
 
         // Act / Assert
         assertTrue(key.isInstanceOf(contact));

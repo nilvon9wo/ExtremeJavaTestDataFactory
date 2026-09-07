@@ -80,7 +80,7 @@ class FieldTest {
     @Test
     void readsTheCurrentValueOffARecord() {
         // Arrange
-        Contact contact = new Contact("c1", "Ada", "Lovelace", "ada@example.com", "a1");
+        Contact contact = Contact.builder().id("c1").firstName("Ada").lastName("Lovelace").email("ada@example.com").accountId("a1").build();
         Field field = Field.of(Contact.class, "firstName");
 
         // Act

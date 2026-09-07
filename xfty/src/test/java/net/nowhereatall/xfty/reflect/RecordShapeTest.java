@@ -43,7 +43,7 @@ class RecordShapeTest {
     @Test
     void rebuildsARecordWithTheChangedComponentAndLeavesTheOriginalUntouched() {
         // Arrange
-        Contact original = new Contact("c1", "Ada", "Lovelace", "ada@example.com", "a1");
+        Contact original = Contact.builder().id("c1").firstName("Ada").lastName("Lovelace").email("ada@example.com").accountId("a1").build();
         RecordShape shape = RecordShape.of(Contact.class);
 
         // Act
@@ -59,7 +59,7 @@ class RecordShapeTest {
     @Test
     void appliesSeveralRecordComponentChangesInOneReconstruction() {
         // Arrange
-        Contact original = new Contact("c1", "Ada", "Lovelace", "ada@example.com", "a1");
+        Contact original = Contact.builder().id("c1").firstName("Ada").lastName("Lovelace").email("ada@example.com").accountId("a1").build();
         RecordShape shape = RecordShape.of(Contact.class);
 
         // Act
@@ -138,7 +138,7 @@ class RecordShapeTest {
 
         // Assert
         assertEquals(
-                java.util.List.of("id", "firstName", "lastName", "email", "accountId", "reportsToId", "department"),
+                java.util.List.of("id", "firstName", "lastName", "email", "accountId", "reportsToId", "department", "birthdate", "account", "cases"),
                 fields.stream().map(Field::name).toList());
     }
 }
