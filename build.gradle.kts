@@ -83,7 +83,7 @@ subprojects {
     signing {
         isRequired = providers.environmentVariable("SIGNING_KEY").isPresent
         val signingKey = providers.environmentVariable("SIGNING_KEY").orNull
-        val signingPassword = providers.environmentVariable("SIGNING_PASSWORD").orNull
+        val signingPassword = providers.environmentVariable("SIGNING_PASSWORD").orNull ?: ""
         if (signingKey != null) {
             useInMemoryPgpKeys(signingKey, signingPassword)
             sign(publishing.publications["maven"])
