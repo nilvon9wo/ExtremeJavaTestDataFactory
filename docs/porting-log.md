@@ -14,6 +14,59 @@ for, plus the unavoidable language-shape differences.
 
 ---
 
+## Current state (2026-09-07, end of the big session)
+
+**269 tests, 2 skipped (the Docker Postgres tier when Docker is absent), 0
+failures. CI green** (build + tests + the Postgres Testcontainers tier +
+`docs/verify-doc-examples.py`).
+
+**Ported and working end to end:**
+
+| Area | Notes |
+|---|---|
+| `Field` tokens (string + `Type::accessor`) | bean + record naming |
+| `RecordShape` | the one record/bean mutation-dispatch point (`set`/`setAll`/`copy`/`instantiate`) |
+| Lookup / variant / specificity | `LookupKey`, `FlavouredLookupKey`, `DiscriminatorLookupKey`, `ProviderLookup(s)`, `MapBackedLookup` |
+| Predicates | full package |
+| Value expressions | `Literal`, `Incrementing*`, `Unique*`, `CopyFromSibling`, `CopyFromAncestor`, `CopyFromDescendant` |
+| Generation engine | `MasterTemplate`, `GenerationContext`, `Bundle`, `RecordProvider<T>`, `SimpleRecordProvider`, `RecordFactory`, `AncestorGenerator`, the value/relationship passes, path values |
+| Children | `ChildProvider` (+ grandchildren), `RecordProviderChildConfig`, `BundleMerger` |
+| `InsertMode.NOW` + `xfty-jpa` | `JpaPersistenceGateway`; H2 tier always runs, Postgres/Testcontainers tier `@Tag("docker")` |
+| Deferred / depth-batched | `InsertMode.DEFERRED`, `.depthBatched()`, `DepthBatchedInserter`, `DeferredInsertBuffer` (+ write-backs), `DeferredInserter`, up-flow `DescendantValuePass` |
+| Enrichment | `bundle.inject*`, `BundleEnricher` recursive walk, `InjectionPathResolver`, `RecordInjector`, `ForcedValues`, `QueryableShapeValidator` |
+| Shared ancestors | `SharedAncestor` (+ `SharedAncestorProvider`, `SharedAncestorResolver`, `SharedRelationshipWiring`), `ISharedAncestorDefaults` |
+| Docs | `docs/getting-started.md` + `docs/use/{generating-records,override-templates,child-records,per-call-relationships}.md`, every example a run test under `xfty/.../examples/`, verified by `docs/verify-doc-examples.py` (in CI) |
+| Maven Central | `io.github.nilvon9wo:xfty` / `:xfty-jpa`, nmcp aggregation, OIDC-adjacent workflow, GPG key generated + published, 3 repo secrets set by Brian |
+
+**`Xfty.Test` translation — done:** all of Predicates (11), Values plain (7) +
+`CopyFromSibling` + `ContextAwareExpression`, Lookup (`LookupKeyTest`,
+`DiscriminatorLookupKeyTest`), `InverseAlignment`, `AncestorCycleGuard`,
+`AncestorCycleTest`, `IdMocker`, `XftyConfigurationException`,
+`DepthBatchedInserterTest`, `PersistenceGatewayTest`, `MasterTemplateTest`,
+`UnsetFieldFillerTest`, `BundleMergerTest`, `PathValueTest`,
+`PathTargetValueTest`, `DeferredValueQueueTest`, `AncestorPathWalkerTest`, plus
+new integration tests (`RecordProviderIntegrationTest`,
+`DeferredInsertIntegrationTest`, `EnrichmentIntegrationTest`,
+`SharedAncestorIntegrationTest`, H2/Postgres persistence) and `Examples/` tests
+(`ExGeneratingRecords`, `ExOverrideTemplates`, `ExChildRecords`,
+`ExPerCallRelationships`).
+
+**`Xfty.Test` translation — still TODO** (features all ported & green; this is
+pure coverage): `Core/` (`BundleTest`, `GenerationContextTest`,
+`ChildProviderTest`, `ChildProviderOfTTest`, `RecordProviderApiTest`,
+`RecordProviderScenarioTest`, `RecordProviderOfTTest`), `Engine/RecordFactoryTest`,
+`Lookup/` (`MultiVariantProviderTest`, `VariantResolutionTest`),
+`Relationships/` (`SharedAncestorTest`, `SharedAncestorHierarchyTest`,
+`SharedAncestorResetTest`), `Values/` (`CopyFromAncestorExpressionTest`,
+`CopyFromDescendantExpressionTest`), all `Enrichment/` unit tests, remaining
+`Examples/`, `Demo/`. Then more `docs/use/` + `docs/extend/` pages.
+
+**Then:** the other `Xfty.*` add-on modules. Most-useful-first is likely the
+DataFaker binding (`Xfty.Bogus` equivalent — realistic fake data) or the
+JUnit 5 `@ExtendWith` extension (`Xfty.Xunit`'s `IsolatesSharedAncestor`).
+
+---
+
 ## 2026-09-07 — scaffold + first checkpoint (field tokens, lookup, mutation dispatch)
 
 ### Build / project shape
