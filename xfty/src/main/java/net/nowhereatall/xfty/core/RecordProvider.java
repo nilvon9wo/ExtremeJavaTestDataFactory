@@ -45,6 +45,7 @@ public final class RecordProvider<T> {
     private InsertInclusivity inclusivity = InsertInclusivity.NONE;
     private boolean ancestorCyclesAllowed;
     private boolean excludePrimaryIds;
+    private boolean depthBatched;
     private boolean forceStructuralChildGeneration;
     private PersistenceGatewayLike persistenceGateway;
     private UnsetFieldFillerLike unsetFieldFiller;
@@ -238,6 +239,15 @@ public final class RecordProvider<T> {
         return with(new ChildProvider(childRelationshipField));
     }
 
+    /**
+     * Opt in to one insert per dependency depth for this NOW call, instead of
+     * one per Provider.
+     */
+    public RecordProvider<T> depthBatched() {
+        this.depthBatched = true;
+        return this;
+    }
+
     /** Internal: a child of a DEFERRED/depth-batched parent must build its own children structurally too. */
     public RecordProvider<T> forceStructuralChildGeneration() {
         this.forceStructuralChildGeneration = true;
@@ -278,16 +288,47 @@ public final class RecordProvider<T> {
         GenerationContext context = buildContext();
         List<Object> templates = templatesToFill();
         return generate(context, templates)
-                .thenCompose(bundle -> supplyChildren(bundle).thenApply(ignored -> bundle));
+                .thenCompose(bundle -> supplyChildrenAndPersist(bundle).thenApply(ignored -> bundle));
     }
 
-    private CompletableFuture<Void> supplyChildren(Bundle bundle) {
-        if (!this.childConfig.hasAny()) {
-            return CompletableFuture.completedFuture(null);
-        }
-        RecordProviderExecutionState state = new RecordProviderExecutionState(
+    private CompletableFuture<Void> supplyChildrenAndPersist(Bundle bundle) {
+        boolean batched = buildsStructurallyForBatchedInsert();
+        CompletableFuture<Void> children = this.childConfig.hasAny()
+                ? this.childConfig.generateAll(bundle, batched || this.forceStructuralChildGeneration, executionState())
+                : CompletableFuture.completedFuture(null);
+        return batched ? children.thenCompose(ignored -> persist(bundle)) : children;
+    }
+
+    private RecordProviderExecutionState executionState() {
+        return new RecordProviderExecutionState(
                 this.providerLookup, resolveFactoryOutlet(), this.insertMode, this.inclusivity, this.persistenceGateway);
-        return this.childConfig.generateAll(bundle, this.forceStructuralChildGeneration, state);
+    }
+
+    private CompletableFuture<Void> persist(Bundle bundle) {
+        if (flushesGraphWhenThisCallEnds()) {
+            return net.nowhereatall.xfty.persistence.DeferredInsertBuffer.insertGraph(
+                    bundle, this.persistenceGateway, this.excludePrimaryIds);
+        }
+        if (deferredToRegistry()) {
+            net.nowhereatall.xfty.persistence.DeferredInserter.register(bundle, this.excludePrimaryIds);
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private boolean buildsStructurallyForBatchedInsert() {
+        return flushesGraphWhenThisCallEnds() || deferredToRegistry();
+    }
+
+    private boolean flushesGraphWhenThisCallEnds() {
+        return this.depthBatched && this.insertMode == InsertMode.NOW;
+    }
+
+    private boolean deferredToRegistry() {
+        return this.insertMode == InsertMode.DEFERRED;
+    }
+
+    private InsertMode contextInsertMode() {
+        return buildsStructurallyForBatchedInsert() ? InsertMode.NEVER : this.insertMode;
     }
 
     public CompletableFuture<List<T>> supplyList() {
@@ -312,13 +353,14 @@ public final class RecordProvider<T> {
     }
 
     private GenerationContext buildContext() {
-        return new GenerationContext(this.providerLookup, this.insertMode, this.inclusivity)
+        GenerationContext context = new GenerationContext(this.providerLookup, contextInsertMode(), this.inclusivity)
                 .withPersistenceGateway(this.persistenceGateway)
                 .withUnsetFieldFiller(this.unsetFieldFiller)
                 .withForcedRelationshipPaths(this.templateConfig.forcedRelationshipPaths())
                 .withPathValues(this.templateConfig.pathValues())
                 .withAncestorCycleGuard(this.ancestorCyclesAllowed)
                 .withPrimaryIdsExcluded(this.excludePrimaryIds);
+        return buildsStructurallyForBatchedInsert() ? context.forBatchedInsert() : context;
     }
 
     private List<Object> templatesToFill() {

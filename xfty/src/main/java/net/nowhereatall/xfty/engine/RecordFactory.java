@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import net.nowhereatall.xfty.Field;
+import net.nowhereatall.xfty.XftyConfigurationException;
 import net.nowhereatall.xfty.core.Bundle;
 import net.nowhereatall.xfty.core.GenerationContext;
 import net.nowhereatall.xfty.core.MasterTemplate;
@@ -37,6 +38,7 @@ public final class RecordFactory {
             bundle.putPrimaries(this.template.primaryTargetField(), records);
             new LookupWiring(bundle, this.context, this.template).wire();
             new ContextAwareValuePass(bundle, this.context, this.template).complete();
+            registerDeferredValues(bundle);
             fillUnsetFields(bundle);
             return persist(bundle).thenApply(ignored -> bundle);
         });
@@ -48,6 +50,23 @@ public final class RecordFactory {
      * that a real {@code InsertMode.NOW} database still sees a value for a NOT
      * NULL column XFTY never cared about.
      */
+    /**
+     * Up-flowing values are left unresolved and handed to the bundle for the
+     * DEFERRED flush to fill. In any other mode the whole forest never exists,
+     * so it is a loud error, not a silent null.
+     */
+    private void registerDeferredValues(Bundle bundle) {
+        if (this.template.deferredExpressionByField().isEmpty()) {
+            return;
+        }
+        if (!this.context.batchedInsertPending()) {
+            throw new XftyConfigurationException(
+                    "A value that reads up from a generated child needs the DEFERRED insert mode - the child must "
+                    + "exist before it can be read. Use InsertMode.DEFERRED and flush the deferred buffer.");
+        }
+        bundle.deferValues(this.template.deferredExpressionByField());
+    }
+
     private void fillUnsetFields(Bundle bundle) {
         UnsetFieldFillerLike filler = this.context.unsetFieldFiller();
         if (filler == null) {

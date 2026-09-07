@@ -20,6 +20,7 @@ public final class Bundle {
     private final Map<Field, Bundle> bundleByField = new LinkedHashMap<>();
     private final Map<Field, List<Object>> recordListByField = new LinkedHashMap<>();
     private final Map<Field, List<BundleChildEntry>> childEntriesByRelationshipField = new LinkedHashMap<>();
+    private final DeferredValueQueue deferredValueQueue = new DeferredValueQueue();
 
     private Field primaryTargetField;
 
@@ -121,6 +122,17 @@ public final class Bundle {
         return cannotResolve
                 ? new ArrayList<>()
                 : InverseAlignment.childrenPerParent(ancestors, primaryRecords(), relationshipField).get(ancestorRowIndex);
+    }
+
+    // Deferred (up-flowing) values -----------------------------------
+
+    /** Record that each primary row's {@code byField} entries are still to be resolved up from descendants. */
+    public void deferValues(Map<Field, net.nowhereatall.xfty.values.DeferredExpressionLike> byField) {
+        this.deferredValueQueue.addForEachRow(primaryRecords().size(), byField);
+    }
+
+    public List<BundleDeferredEntry> deferredValues() {
+        return this.deferredValueQueue.entries();
     }
 
     // Child collections -------------------------------------------------

@@ -10,6 +10,7 @@ import net.nowhereatall.xfty.SerializableFunction;
 import net.nowhereatall.xfty.XftyConfigurationException;
 import net.nowhereatall.xfty.relationships.DefaultRelationshipLike;
 import net.nowhereatall.xfty.values.ContextAwareExpressionLike;
+import net.nowhereatall.xfty.values.DeferredExpressionLike;
 import net.nowhereatall.xfty.values.LiteralExpression;
 import net.nowhereatall.xfty.values.ValueExpressionLike;
 
@@ -25,6 +26,7 @@ public final class MasterTemplate {
     private final Field primaryTargetField;
     private final Map<Field, ValueExpressionLike> defaultByField;
     private final Map<Field, ContextAwareExpressionLike> contextAwareByField;
+    private final Map<Field, DeferredExpressionLike> deferredExpressionByField;
     private final Map<Field, DefaultRelationshipLike> requiredRelationshipByField;
     private final Map<Field, DefaultRelationshipLike> optionalRelationshipByField;
     private final List<Field> valueFieldOrder;
@@ -46,6 +48,7 @@ public final class MasterTemplate {
         this.primaryTargetField = primaryTargetField;
         this.defaultByField = defaultByField;
         this.contextAwareByField = new LinkedHashMap<>();
+        this.deferredExpressionByField = new LinkedHashMap<>();
         this.requiredRelationshipByField = requiredRelationshipByField;
         this.optionalRelationshipByField = optionalRelationshipByField;
         this.valueFieldOrder = new ArrayList<>(defaultByField.keySet());
@@ -61,6 +64,10 @@ public final class MasterTemplate {
 
     public Map<Field, ContextAwareExpressionLike> contextAwareByField() {
         return this.contextAwareByField;
+    }
+
+    public Map<Field, DeferredExpressionLike> deferredExpressionByField() {
+        return this.deferredExpressionByField;
     }
 
     public Map<Field, DefaultRelationshipLike> requiredRelationshipByField() {
@@ -79,6 +86,7 @@ public final class MasterTemplate {
     public MasterTemplate put(Field field, ValueExpressionLike valueTemplate) {
         trackFieldOrder(field);
         this.contextAwareByField.remove(field);
+        this.deferredExpressionByField.remove(field);
         this.defaultByField.put(field, valueTemplate);
         return this;
     }
@@ -86,12 +94,25 @@ public final class MasterTemplate {
     public MasterTemplate put(Field field, ContextAwareExpressionLike contextAwareExpression) {
         trackFieldOrder(field);
         this.defaultByField.remove(field);
+        this.deferredExpressionByField.remove(field);
         this.contextAwareByField.put(field, contextAwareExpression);
+        return this;
+    }
+
+    /** An up-flowing value - resolved during the DEFERRED flush. */
+    public MasterTemplate put(Field field, DeferredExpressionLike deferredValue) {
+        trackFieldOrder(field);
+        this.defaultByField.remove(field);
+        this.contextAwareByField.remove(field);
+        this.deferredExpressionByField.put(field, deferredValue);
         return this;
     }
 
     /** Convenience overload, routed by runtime type; a relationship is rejected, anything else is a literal. */
     public MasterTemplate put(Field field, Object value) {
+        if (value instanceof DeferredExpressionLike deferred) {
+            return put(field, deferred);
+        }
         if (value instanceof ContextAwareExpressionLike contextAware) {
             return put(field, contextAware);
         }
@@ -137,6 +158,7 @@ public final class MasterTemplate {
         return field.equals(this.primaryTargetField)
                 || this.defaultByField.containsKey(field)
                 || this.contextAwareByField.containsKey(field)
+                || this.deferredExpressionByField.containsKey(field)
                 || this.requiredRelationshipByField.containsKey(field)
                 || this.optionalRelationshipByField.containsKey(field);
     }
@@ -149,6 +171,7 @@ public final class MasterTemplate {
                 new LinkedHashMap<>(this.requiredRelationshipByField),
                 new LinkedHashMap<>(this.optionalRelationshipByField));
         theCopy.contextAwareByField.putAll(this.contextAwareByField);
+        theCopy.deferredExpressionByField.putAll(this.deferredExpressionByField);
         theCopy.valueFieldOrder.clear();
         theCopy.valueFieldOrder.addAll(this.valueFieldOrder);
         return theCopy;
@@ -157,6 +180,7 @@ public final class MasterTemplate {
     public MasterTemplate remove(Field field) {
         this.defaultByField.remove(field);
         this.contextAwareByField.remove(field);
+        this.deferredExpressionByField.remove(field);
         this.requiredRelationshipByField.remove(field);
         this.optionalRelationshipByField.remove(field);
         this.valueFieldOrder.removeIf(each -> each.equals(field));
@@ -164,7 +188,9 @@ public final class MasterTemplate {
     }
 
     private void trackFieldOrder(Field field) {
-        if (!this.defaultByField.containsKey(field) && !this.contextAwareByField.containsKey(field)) {
+        if (!this.defaultByField.containsKey(field)
+                && !this.contextAwareByField.containsKey(field)
+                && !this.deferredExpressionByField.containsKey(field)) {
             this.valueFieldOrder.add(field);
         }
     }
