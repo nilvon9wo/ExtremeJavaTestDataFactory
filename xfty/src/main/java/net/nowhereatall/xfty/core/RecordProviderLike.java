@@ -1,20 +1,24 @@
 package net.nowhereatall.xfty.core;
 
+import java.util.List;
+
+import net.nowhereatall.xfty.Field;
+
 /**
- * Resolves to the set of definitions that generate one record type (and its
- * related graph).
+ * The definitions that generate one record type (and its related graph). The
+ * seam the lookup/variant system stores and returns.
  *
- * <p>This is the seam the lookup/variant system stores and returns. The full
- * generation surface - master template, primary target field, bundle creation -
- * is added as the engine is ported; for now a provider need only name the type
- * it is responsible for, which is all {@link net.nowhereatall.xfty.lookup}
- * needs to route by.
- *
- * <p>(C# {@code IRecordProvider}. The plain noun {@code RecordProvider} is
- * reserved for the concrete main-entry-point class, matching the C# port.)
+ * <p>(C# {@code IRecordProvider}. The plain noun {@code RecordProvider} is the
+ * concrete fluent entry-point class.)
  */
 public interface RecordProviderLike {
 
-    /** The record type this provider generates. */
-    Class<?> primaryType();
+    /** The primary key / identity field of the generated record. */
+    Field primaryTargetField();
+
+    /** This provider's Master Template. */
+    MasterTemplate masterTemplate();
+
+    /** Turn this provider's Master Template plus {@code templateRecords} into a wired {@link Bundle}. */
+    Bundle createBundle(GenerationContext context, List<Object> templateRecords);
 }

@@ -21,8 +21,19 @@ class DefaultRelationshipTest {
 
     private static final class StubProvider implements RecordProviderLike {
         @Override
-        public Class<?> primaryType() {
-            return Account.class;
+        public net.nowhereatall.xfty.Field primaryTargetField() {
+            throw new UnsupportedOperationException("routing stub");
+        }
+
+        @Override
+        public net.nowhereatall.xfty.core.MasterTemplate masterTemplate() {
+            throw new UnsupportedOperationException("routing stub");
+        }
+
+        @Override
+        public net.nowhereatall.xfty.core.Bundle createBundle(
+                net.nowhereatall.xfty.core.GenerationContext context, java.util.List<Object> templateRecords) {
+            throw new UnsupportedOperationException("routing stub");
         }
     }
 

@@ -19,7 +19,8 @@ the running port decisions.
 | Lookup / variant / specificity system | ✅ built + tested |
 | Predicates | ✅ built + tested |
 | Value expressions (literal, counters, unique tokens) | ✅ built + tested |
-| Generation engine (context-aware values, relationships, bundles) | ⬜ not started |
+| Generation engine — `supply()` with defaults, overrides, required/optional relationships, context-aware sibling & ancestor values | ✅ built + tested |
+| Downward child collections, shared ancestors, deferred/depth-batched insert | ⬜ not started |
 | Enrichment | ⬜ not started |
 | `xfty-jpa` persistence binding (H2 + Testcontainers Postgres) | ⬜ scaffolded only |
 | Maven Central publishing | 🔶 wired (`io.github.nilvon9wo:xfty`); see [docs/publishing.md](docs/publishing.md) |
@@ -27,6 +28,27 @@ the running port decisions.
 Java records are a first-class target, fully co-equal with classic mutable
 classes — every place the engine would set a field after construction, a record
 is instead reconstructed through its canonical constructor.
+
+## Example
+
+```java
+ProviderLookupLike lookup = new DefaultProviderLookup();
+
+// A Contact with sensible defaults and a generated Account, foreign key wired:
+Bundle bundle = new RecordProvider(Contact.class, lookup)
+    .setInsertMode(InsertMode.MOCK)
+    .setInclusivity(InsertInclusivity.REQUIRED)
+    .supplyBundle();
+
+Contact contact = (Contact) bundle.primaryRecords().get(0);
+Account account = (Account) bundle.getList(Field.of(Contact.class, "accountId")).get(0);
+assertEquals(account.getId(), contact.accountId());
+
+// Override only what the test cares about:
+Account acme = (Account) new RecordProvider(Account.class, lookup)
+    .put(Account::getName, "Acme")
+    .supply();
+```
 
 ## Build
 

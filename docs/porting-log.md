@@ -202,10 +202,65 @@ randomness). `ContextAwareExpressionLike` / `DeferredExpressionLike` and their
   the PGP secret) is config-only. Full reasoning + the secrets to set:
   `docs/publishing.md`.
 
+---
+
+## 2026-09-07 — the generation engine (vertical slice: `supply()` works)
+
+`new RecordProvider(Contact.class, lookup).setInsertMode(MOCK)
+.setInclusivity(REQUIRED).supply()` now produces a `Contact` with defaults, a
+generated `Account` ancestor, and the FK wired between them - end to end,
+records and beans alike.
+
+**Ported:** `InsertMode`/`InsertInclusivity`, `MasterTemplate` (partials
+merged), `PathValue`/`PathTargetValue`/`PathTargetValueKind`,
+`AncestorPathWalker`, `InverseAlignment`, `Bundle` (parents + primaries;
+children/enrichment/deferred-queue omitted), `GenerationContext`,
+`AncestorCycleGuard`, `ValueFieldPass`, `RecordProviderLike` (full),
+`SimpleRecordProvider`, `RecordProvider` + `RecordProviderTemplateConfig` +
+`RecordProviderConflictException`, engine passes (`PlainValueFiller`,
+`ContextAwareValuePass`, `RelationshipForcer`, `PathValueApplier`,
+`LookupWiring`, `AncestorGenerator`, `RecordFactory`), `PersistenceGatewayLike`
++ `IdMocker`, `UnsetFieldFillerLike`, `ContextAwareExpressionLike` +
+`CopyFromSiblingExpression` + `CopyFromAncestorExpression`, and the demo
+`AccountDataProvider`/`ContactDataProvider`/`DefaultProviderLookup`.
+
+**Two structural adaptations, both because a Java record is immutable:**
+
+1. **Synchronous, not `async`.** The C# port is `Task`-based end to end
+   ("every real backing store already works that way"). Java's persistence
+   world - JPA, JDBC - is synchronous; `CompletableFuture` everywhere would be
+   noise. `PersistenceGatewayLike.insert` returns `void`, `RecordFactory` /
+   `RecordProvider.supply*` are plain calls. The C# port added async in a later
+   pass, so this matches its earlier shape too.
+2. **Passes thread the record through instead of mutating in place.** C#'s
+   `PlainValueFiller` / `LookupWiring` / `ContextAwareValuePass` / `IdMocker`
+   all do `field.SetValue(record, x)` and rely on later steps seeing it. For a
+   Java record, `RecordShape.with(record, field, x)` returns a *new* instance,
+   so every pass takes the current record(s), applies its changes, and writes
+   the result back to `bundle.putPrimaries(...)`. Within
+   `ContextAwareValuePass.completeRow` the per-field context
+   (`GenerationContext.recordBeingBuilt`) is re-pointed at the rebuilt instance
+   before each next field, so a sibling read always sees current state. One
+   dispatch point (`RecordShape`), no record/bean branching in the passes
+   themselves.
+
+**Deferred to later passes** (stubbed or simply absent, as the C# port
+staged them): children (`ChildProvider`, `RecordProvider.with*`),
+`SharedAncestor`/`SharedRelationship` (`PathTargetValue.isSharedRelationship()`
+returns false), deferred/up-flow values + depth-batched insert
+(`DeferredExpressionLike`, `CopyFromDescendantExpression`, `DeferredGraph`,
+`DepthBatchedInserter`, ...), `InsertMode.NOW` real persistence (throws without
+a gateway, as in C#), the typed `MasterTemplate<T>` / `RecordProvider<T>`
+wrappers, and enrichment.
+
+**Tests:** `RecordProviderIntegrationTest` (11) - defaults, override-wins,
+mock ids, `NEVER` leaves id unset, required-relationship FK wiring, `NONE`
+skips it, quantity → N distinct, context-aware sibling (success + the loud
+throw on a still-pending sibling), context-aware ancestor copy. 74 total,
+green.
+
 ### Still to port
 
-Generation engine (`GenerationContext`, `MasterTemplate`, `RecordFactory`,
-`AncestorGenerator`, `Bundle`, the value/relationship passes, `ChildProvider`,
-`RecordProvider`/`SimpleRecordProvider`, `RecordProvider<T>`), the
-context-aware/deferred expressions, enrichment, `SharedAncestor`, the demo
-`ProviderLookup`, `xfty-jpa`, and keyless signing.
+Children, shared ancestors, deferred/depth-batched persistence, `InsertMode.NOW`
+against a real gateway, the typed wrappers, enrichment, `xfty-jpa`, and keyless
+signing.

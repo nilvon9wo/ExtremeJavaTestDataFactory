@@ -138,7 +138,7 @@ class RecordShapeTest {
 
         // Assert
         assertEquals(
-                java.util.List.of("id", "firstName", "lastName", "email", "accountId"),
+                java.util.List.of("id", "firstName", "lastName", "email", "accountId", "reportsToId", "department"),
                 fields.stream().map(Field::name).toList());
     }
 }
