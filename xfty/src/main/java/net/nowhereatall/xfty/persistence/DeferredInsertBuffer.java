@@ -28,6 +28,9 @@ public final class DeferredInsertBuffer {
     private final List<Object> pendingRecords = new ArrayList<>();
     private final List<PendingDeferredValue> pendingDeferredValues = new ArrayList<>();
     private final Set<Integer> excludedIndices = new LinkedHashSet<>();
+    // Each collected bundle's own list, plus the flat index its first record occupies - so the
+    // resolved records (new instances, for a record type) are threaded back into the bundle.
+    private final List<WriteBack> writeBacks = new ArrayList<>();
 
     public static CompletableFuture<Void> insertGraph(Bundle bundle, PersistenceGatewayLike gateway, boolean excludePrimaryIds) {
         DeferredInsertBuffer buffer = new DeferredInsertBuffer();
@@ -64,13 +67,26 @@ public final class DeferredInsertBuffer {
 
     public CompletableFuture<Void> insertAll(PersistenceGatewayLike gateway) {
         resolveUpFlowValues();
-        return DepthBatchedInserter.insertAll(this.pendingRecords, this.pendingLinks, gateway, this.excludedIndices);
+        return DepthBatchedInserter.insertAll(this.pendingRecords, this.pendingLinks, gateway, this.excludedIndices)
+                .thenRun(this::writeBackResolvedRecords);
     }
 
     /** Depth-batched resolution of every buffered bundle honouring {@code mode} (NOW/MOCK/NEVER). */
     public CompletableFuture<Void> resolveAll(InsertMode mode, PersistenceGatewayLike gateway) {
         resolveUpFlowValues();
-        return DepthBatchedInserter.resolveAll(this.pendingRecords, this.pendingLinks, mode, gateway, this.excludedIndices);
+        return DepthBatchedInserter.resolveAll(this.pendingRecords, this.pendingLinks, mode, gateway, this.excludedIndices)
+                .thenRun(this::writeBackResolvedRecords);
+    }
+
+    private void writeBackResolvedRecords() {
+        for (WriteBack writeBack : this.writeBacks) {
+            for (int position = 0; position < writeBack.list.size(); position++) {
+                writeBack.list.set(position, this.pendingRecords.get(writeBack.startIndex + position));
+            }
+        }
+    }
+
+    private record WriteBack(List<Object> list, int startIndex) {
     }
 
     public CompletableFuture<Void> resolveAll(InsertMode mode) {
@@ -142,6 +158,7 @@ public final class DeferredInsertBuffer {
     }
 
     private List<IndexedRecord> append(List<Object> records) {
+        this.writeBacks.add(new WriteBack(records, this.pendingRecords.size()));
         List<IndexedRecord> appended = new ArrayList<>(records.size());
         for (Object record : records) {
             int index = this.pendingRecords.size();

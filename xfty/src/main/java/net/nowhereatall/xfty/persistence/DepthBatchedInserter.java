@@ -44,6 +44,15 @@ public final class DepthBatchedInserter {
         return resolveAll(records, links, InsertMode.NOW, gateway, excludedIndices);
     }
 
+    public static CompletableFuture<Void> insertAll(List<Object> records, List<DepthBatchedInserterParentLink> links) {
+        return insertAll(records, links, null, null);
+    }
+
+    public static CompletableFuture<Void> resolveAll(
+            List<Object> records, List<DepthBatchedInserterParentLink> links, InsertMode mode) {
+        return resolveAll(records, links, mode, null, null);
+    }
+
     /**
      * Depth-batched resolution honouring the mode: NOW inserts each depth layer
      * through {@code gateway}, MOCK gives it mock ids - either way the child
@@ -102,38 +111,44 @@ public final class DepthBatchedInserter {
 
     private CompletableFuture<Void> insertLayer(List<Integer> indexes) {
         indexes.forEach(this::pointAtParents);
-        List<Object> layer = new ArrayList<>();
+        List<Integer> toPersist = new ArrayList<>();
         for (int index : indexes) {
             if (!this.excludedIndices.contains(index) && Ids.of(this.records.get(index)) == null) {
-                layer.add(this.records.get(index));
+                toPersist.add(index);
             }
         }
-        if (layer.isEmpty()) {
+        if (toPersist.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
         return switch (this.mode) {
             case MOCK -> {
-                for (int index : indexes) {
+                for (int index : toPersist) {
                     Object record = this.records.get(index);
-                    if (!this.excludedIndices.contains(index) && Ids.of(record) == null) {
-                        Field idField = Ids.fieldOf(record.getClass());
-                        this.records.set(index, RecordShape.of(record.getClass()).set(record, idField, IdMocker.generateId()));
-                    }
+                    Field idField = Ids.fieldOf(record.getClass());
+                    this.records.set(index, RecordShape.of(record.getClass()).set(record, idField, IdMocker.generateId()));
                 }
                 yield CompletableFuture.completedFuture(null);
             }
-            case NOW -> insertNow(layer);
+            case NOW -> insertNow(toPersist);
             default -> CompletableFuture.completedFuture(null);
         };
     }
 
-    private CompletableFuture<Void> insertNow(List<Object> layer) {
+    private CompletableFuture<Void> insertNow(List<Integer> indexes) {
         if (this.gateway == null) {
             throw new UnsupportedOperationException(
                     "InsertMode.NOW needs a persistence gateway - pass one to resolveAll(...)/insertAll(...), or "
                     + "RecordProvider.setPersistenceGateway(...) - use MOCK or NEVER when none is configured.");
         }
-        return PersistenceGatewayExtensions.insertMixed(this.gateway, layer);
+        List<Object> batch = new ArrayList<>();
+        for (int index : indexes) {
+            batch.add(this.records.get(index));
+        }
+        return PersistenceGatewayExtensions.insertMixed(this.gateway, batch).thenAccept(persisted -> {
+            for (int k = 0; k < indexes.size(); k++) {
+                this.records.set(indexes.get(k), persisted.get(k));
+            }
+        });
     }
 
     private void pointAtParents(int child) {

@@ -22,7 +22,8 @@ the running port decisions.
 | Generation engine — `supply()` with defaults, overrides, required/optional relationships, context-aware sibling & ancestor values | ✅ built + tested |
 | Downward child collections | ✅ built + tested |
 | `InsertMode.NOW` real persistence + `xfty-jpa` (H2 tier + Testcontainers Postgres tier) | ✅ built + tested |
-| Shared ancestors, deferred/depth-batched insert | ⬜ not started |
+| Deferred / depth-batched insert (`InsertMode.DEFERRED`, `.depthBatched()`, up-flow values) | ✅ built + tested |
+| Shared ancestors | ⬜ not started |
 | Enrichment | ⬜ not started |
 | Maven Central publishing | 🔶 wired (`io.github.nilvon9wo:xfty`); see [docs/publishing.md](docs/publishing.md) |
 

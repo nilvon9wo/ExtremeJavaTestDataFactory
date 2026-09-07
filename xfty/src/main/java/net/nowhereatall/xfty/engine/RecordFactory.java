@@ -101,18 +101,19 @@ public final class RecordFactory {
                 bundle.putPrimaries(primaryTargetField, IdMocker.addIds(records, primaryTargetField));
                 yield CompletableFuture.completedFuture(null);
             }
-            case NOW -> insertNow(records, primaryTargetField);
+            case NOW -> insertNow(bundle, records, primaryTargetField);
             default -> CompletableFuture.completedFuture(null);
         };
     }
 
-    private CompletableFuture<Void> insertNow(List<Object> records, Field primaryTargetField) {
+    private CompletableFuture<Void> insertNow(Bundle bundle, List<Object> records, Field primaryTargetField) {
         PersistenceGatewayLike gateway = this.context.persistenceGateway();
         if (gateway == null) {
             throw new UnsupportedOperationException(
                     "InsertMode.NOW needs a persistence gateway - RecordProvider.setPersistenceGateway(...) - use "
                     + "MOCK or NEVER when none is configured.");
         }
-        return gateway.insert(records, primaryTargetField);
+        return gateway.insert(records, primaryTargetField)
+                .thenAccept(persisted -> bundle.putPrimaries(primaryTargetField, persisted));
     }
 }

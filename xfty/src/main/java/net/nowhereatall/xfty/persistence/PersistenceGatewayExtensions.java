@@ -20,21 +20,33 @@ public final class PersistenceGatewayExtensions {
     private PersistenceGatewayExtensions() {
     }
 
-    public static CompletableFuture<Void> insertMixed(PersistenceGatewayLike gateway, List<Object> records) {
-        Map<Class<?>, List<Object>> byType = new LinkedHashMap<>();
-        for (Object record : records) {
-            byType.computeIfAbsent(record.getClass(), ignored -> new ArrayList<>()).add(record);
+    /** Persist a mixed-type batch, one gateway call per type; returns the persisted records in the input order. */
+    public static CompletableFuture<List<Object>> insertMixed(PersistenceGatewayLike gateway, List<Object> records) {
+        Map<Class<?>, List<Integer>> positionsByType = new LinkedHashMap<>();
+        for (int position = 0; position < records.size(); position++) {
+            positionsByType.computeIfAbsent(records.get(position).getClass(), ignored -> new ArrayList<>()).add(position);
         }
-        return insertGroups(gateway, new ArrayList<>(byType.entrySet()), 0);
+        List<Object> result = new ArrayList<>(records);
+        return insertGroups(gateway, new ArrayList<>(positionsByType.entrySet()), 0, records, result)
+                .thenApply(ignored -> result);
     }
 
     private static CompletableFuture<Void> insertGroups(
-            PersistenceGatewayLike gateway, List<Map.Entry<Class<?>, List<Object>>> groups, int index) {
+            PersistenceGatewayLike gateway, List<Map.Entry<Class<?>, List<Integer>>> groups, int index,
+            List<Object> source, List<Object> result) {
         if (index >= groups.size()) {
             return CompletableFuture.completedFuture(null);
         }
-        Map.Entry<Class<?>, List<Object>> group = groups.get(index);
-        return gateway.insert(group.getValue(), Ids.fieldOf(group.getKey()))
-                .thenCompose(ignored -> insertGroups(gateway, groups, index + 1));
+        Map.Entry<Class<?>, List<Integer>> group = groups.get(index);
+        List<Object> batch = new ArrayList<>();
+        for (int position : group.getValue()) {
+            batch.add(source.get(position));
+        }
+        return gateway.insert(batch, Ids.fieldOf(group.getKey())).thenCompose(persisted -> {
+            for (int k = 0; k < group.getValue().size(); k++) {
+                result.set(group.getValue().get(k), persisted.get(k));
+            }
+            return insertGroups(gateway, groups, index + 1, source, result);
+        });
     }
 }

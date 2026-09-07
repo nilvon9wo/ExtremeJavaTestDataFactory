@@ -39,13 +39,13 @@ public final class JpaPersistenceGateway implements PersistenceGatewayLike {
     }
 
     @Override
-    public CompletableFuture<Void> insert(List<Object> records, Field idField) {
+    public CompletableFuture<List<Object>> insert(List<Object> records, Field idField) {
         for (Object record : records) {
             fillStringIdIfAbsent(record, idField);
             this.entityManager.persist(record);
         }
         this.entityManager.flush();
-        return CompletableFuture.completedFuture(null);
+        return CompletableFuture.completedFuture(records);
     }
 
     private static void fillStringIdIfAbsent(Object record, Field idField) {

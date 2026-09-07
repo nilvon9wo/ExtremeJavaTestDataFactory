@@ -26,9 +26,11 @@ import net.nowhereatall.xfty.Field;
 public interface PersistenceGatewayLike {
 
     /**
-     * Persist every record in {@code records} - all the same type - and set
-     * {@code idField} on each to its real, generated identifier. The returned
-     * future completes when persistence is done.
+     * Persist every record in {@code records} - all the same type - and give each
+     * its real, generated identifier on {@code idField}. Returns the persisted
+     * records <b>in the same order</b>: a mutable-class gateway (JPA, JDBC)
+     * returns the same instances it was given; a record-friendly gateway returns
+     * fresh instances carrying the id, since a Java record cannot be mutated.
      */
-    CompletableFuture<Void> insert(List<Object> records, Field idField);
+    CompletableFuture<List<Object>> insert(List<Object> records, Field idField);
 }

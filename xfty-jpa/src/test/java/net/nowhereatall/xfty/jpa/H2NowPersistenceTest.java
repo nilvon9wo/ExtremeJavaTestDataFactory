@@ -94,6 +94,24 @@ class H2NowPersistenceTest {
     }
 
     @Test
+    void supply_NowPlusDepthBatched_InsertsOneLayerAtATimeAndWiresTheRealForeignKey() {
+        // Arrange
+        RecordProvider<JpaContact> provider = contactProvider()
+                .setInclusivity(InsertInclusivity.REQUIRED)
+                .depthBatched();
+
+        // Act
+        JpaContact result = Async.await(provider.supply());
+
+        // Assert - both rows are really there, wired to each other, after a depth-batched NOW call
+        this.entityManager.clear();
+        JpaContact rereadContact = this.entityManager.find(JpaContact.class, result.getId());
+        JpaAccount rereadAccount = this.entityManager
+                .createQuery("select a from JpaAccount a", JpaAccount.class).getResultList().get(0);
+        assertEquals(rereadAccount.getId(), rereadContact.getAccountId());
+    }
+
+    @Test
     void supplyList_InNowMode_WithQuantity_InsertsEveryRow() {
         // Arrange
         RecordProvider<JpaAccount> provider = accountProvider().setQuantityPerTemplate(5);
