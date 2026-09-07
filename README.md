@@ -52,6 +52,10 @@ Account acme = (Account) new RecordProvider(Account.class, lookup)
     .supply();
 ```
 
+## Documentation
+
+Start with **[docs/getting-started.md](docs/getting-started.md)**. Every code example in the docs is compiled and run as a test (`docs/verify-doc-examples.py` checks they stay in sync).
+
 ## Build
 
 ```bash

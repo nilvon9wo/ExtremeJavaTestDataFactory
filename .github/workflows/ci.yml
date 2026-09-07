@@ -25,6 +25,9 @@ jobs:
       - name: Build + test
         run: ./gradlew build --stacktrace
 
+      - name: Verify every documented example is exercised by a test
+        run: python3 docs/verify-doc-examples.py
+
       # The Postgres/Testcontainers tier of xfty-jpa is tagged "docker" and skips
       # when no Docker daemon is present. ubuntu-latest has one, so it runs here.
       - name: Upload test reports
