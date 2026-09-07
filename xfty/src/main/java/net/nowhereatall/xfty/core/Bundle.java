@@ -231,6 +231,10 @@ public final class Bundle {
         return inject(field, net.nowhereatall.xfty.enrichment.InjectConfig.allChildren());
     }
 
+    public Bundle getChildBundle(Class<?> ownerType, String fieldName) {
+        return getChildBundle(Field.of(ownerType, fieldName));
+    }
+
     /** A single bundle of every child for {@code childRelationshipField}. Null if none. */
     public Bundle getChildBundle(Field childRelationshipField) {
         List<Bundle> bundles = childBundles(childRelationshipField);

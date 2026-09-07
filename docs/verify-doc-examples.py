@@ -26,7 +26,9 @@ MIN_COVERAGE = 0.75
 
 
 def canon(text: str) -> str:
+    # a doc uses a `lookup` local; a test may use LOOKUP, lookup(), lookupWithCase() ...
     text = re.sub(r"\bLOOKUP\b", "lookup", text)
+    text = re.sub(r"\blookup\w*\(\)", "lookup", text)
     # collapse ALL whitespace so a differently-wrapped test still matches
     return re.sub(r"\s+", "", text)
 
@@ -34,8 +36,9 @@ def canon(text: str) -> str:
 def statements(block: str) -> list[str]:
     """Join physical lines into logical statements so a differently-wrapped test still matches."""
     out, buffer = [], ""
-    for line in block.splitlines():
-        if line.strip().startswith("//") or not line.strip():
+    for raw_line in block.splitlines():
+        line = re.sub(r"\s*//.*$", "", raw_line).rstrip()
+        if not line.strip():
             continue
         buffer = f"{buffer} {line.strip()}".strip()
         if line.rstrip().endswith((";", "{", "}")):
@@ -51,7 +54,9 @@ def load_examples() -> tuple[str, set[str]]:
         sys.exit(f"no examples directory at {EXAMPLES}")
     raw = "\n".join(f.read_text(encoding="utf-8") for f in EXAMPLES.glob("*.java"))
     cited = set(re.findall(r"//\s*from\s+(docs/\S+?\.md)", raw))
-    return canon(raw), cited
+    # build the same "logical statement" view of the tests the doc blocks get
+    corpus = "\n".join(statements(raw))
+    return corpus, cited
 
 
 def main() -> int:
