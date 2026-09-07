@@ -20,9 +20,10 @@ the running port decisions.
 | Predicates | ✅ built + tested |
 | Value expressions (literal, counters, unique tokens) | ✅ built + tested |
 | Generation engine — `supply()` with defaults, overrides, required/optional relationships, context-aware sibling & ancestor values | ✅ built + tested |
-| Downward child collections, shared ancestors, deferred/depth-batched insert | ⬜ not started |
+| Downward child collections | ✅ built + tested |
+| `InsertMode.NOW` real persistence + `xfty-jpa` (H2 tier + Testcontainers Postgres tier) | ✅ built + tested |
+| Shared ancestors, deferred/depth-batched insert | ⬜ not started |
 | Enrichment | ⬜ not started |
-| `xfty-jpa` persistence binding (H2 + Testcontainers Postgres) | ⬜ scaffolded only |
 | Maven Central publishing | 🔶 wired (`io.github.nilvon9wo:xfty`); see [docs/publishing.md](docs/publishing.md) |
 
 Java records are a first-class target, fully co-equal with classic mutable

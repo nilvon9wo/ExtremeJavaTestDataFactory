@@ -248,10 +248,45 @@ stores are async. A test helper `Async.await(future)` unwraps
 `CompletionException` so tests assert the real exception type.
 
 **Not yet reached** (being ported next - not "deferred", the goal is
-feature parity with the current C# version): children (`ChildProvider`),
-`SharedAncestor`/`SharedRelationship`, deferred/up-flow + depth-batched insert,
-the typed `MasterTemplate<T>` / `RecordProvider<T>` wrappers, enrichment, and
-the full `Xfty.Test` translation.
+feature parity with the current C# version): `SharedAncestor`/`SharedRelationship`,
+deferred/up-flow + depth-batched insert, enrichment, and the rest of the
+`Xfty.Test` translation.
+
+---
+
+## 2026-09-07 (cont.) — course-correct + children + `xfty-jpa` + async + generics
+
+**Feedback taken** (see `feedback-match-current-csharp` memory): match the
+*current* C# version feature-for-feature, no deferring by "C# staged it that
+way"; async end-to-end (don't assume JPA/synchronous - JPA is only the first
+binding); verb method names; port `Xfty.Test`.
+
+- **Async end to end.** `CompletableFuture` throughout -
+  `RecordProviderLike.createBundle`, `RecordProvider.supply*`, `RecordFactory`,
+  `AncestorGenerator` (recursion via `thenCompose`), `PersistenceGatewayLike.insert`.
+  `net.nowhereatall.xfty.Async.await(future)` unwraps `CompletionException`.
+- **`RecordProvider<T>` generic** - `supply()`/`supplyList()` return
+  `CompletableFuture<T>`/`<List<T>>`, `put(T::accessor, v)` needs no cast.
+  `Bundle.getPrimaries(Class<R>)` / `getList(Class<R>, ownerType, "field")` are
+  typed. `MasterTemplate.of(Type::accessor)` names the primary field by ref.
+- **`RecordShape.with` → `set`** (methods are verbs); `blank` → `instantiate`.
+- **Children ported** - `ChildProvider` (+ `ChildProviderPendingPut`),
+  `RecordProviderChildConfig`, `BundleChildEntry`, `BundleMerger`, Bundle's
+  child methods; `RecordProvider.with(ChildProvider)`/`withChild`/`withChildren`.
+- **`xfty-jpa` + `InsertMode.NOW`.** `JpaPersistenceGateway` via
+  `EntityManager.persist` (the analog of C#'s `EfPersistenceGateway`).
+  `xfty-jpa` test module: mutable `@Entity` demo classes (`JpaAccount`/
+  `JpaContact` - JPA entities cannot be records, exactly the expected
+  constraint), Hibernate-bootstrapped **H2 tier that always runs** (3 tests:
+  real insert, required-parent FK wiring, quantity) and a **Testcontainers
+  Postgres tier tagged `docker`** that `assumeTrue`-skips without Docker.
+- **Demo domain** fleshed out to the full C# field set + nav slots, with
+  builders on `Account`/`Contact`/`Case`.
+- **`Xfty.Test` translation so far:** predicates (11 files), values (7 plain +
+  `CopyFromSibling` + `ContextAwareExpression`), lookup (`LookupKeyTest`,
+  `DiscriminatorLookupKeyTest`), `InverseAlignment`, `AncestorCycleGuard`,
+  `IdMocker`, `XftyConfigurationException`. 177 tests, 2 skipped (Docker), 0
+  failures.
 
 **Tests:** `RecordProviderIntegrationTest` (11) - defaults, override-wins,
 mock ids, `NEVER` leaves id unset, required-relationship FK wiring, `NONE`

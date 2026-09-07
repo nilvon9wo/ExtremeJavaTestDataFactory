@@ -4,9 +4,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 /**
- * Test helper: block on a {@link CompletableFuture} and unwrap the
- * {@link CompletionException} {@code join()} would otherwise wrap a thrown
- * exception in, so tests can assert on the real exception type XFTY throws.
+ * Blocks on a {@link CompletableFuture} and hands back its value, unwrapping the
+ * {@link CompletionException} that {@code join()} would otherwise wrap a thrown
+ * exception in - so callers see the real exception XFTY throws
+ * ({@link XftyConfigurationException} and friends), not a wrapper.
+ *
+ * <p>Generation is asynchronous end to end; a synchronous caller (a test, a
+ * seeding script, a {@code @BeforeEach}) uses this to wait for a
+ * {@code supply()} / {@code supplyBundle()} result.
  */
 public final class Async {
 
