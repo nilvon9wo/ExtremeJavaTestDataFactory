@@ -41,7 +41,10 @@ allows:
 | `MAVEN_CENTRAL_USERNAME` | Portal token *username* — [central.sonatype.com](https://central.sonatype.com/) → your name → **View Account** → **Generate User Token** |
 | `MAVEN_CENTRAL_PASSWORD` | Portal token *password* from the same screen |
 | `GPG_SIGNING_KEY` | ASCII-armored private signing key (whole block, BEGIN/END lines included) |
-| `GPG_SIGNING_PASSWORD` | passphrase for that key (empty string if the key has none) |
+| `GPG_SIGNING_PASSWORD` | passphrase for that key — **don't create this secret at all if the key has no passphrase** (GitHub rejects empty secret values; the build defaults it to `""`) |
+
+So a passphrase-less key means **three** secrets, not four: `GPG_SIGNING_KEY`,
+`MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`.
 
 ### Generating the signing key
 

@@ -45,4 +45,7 @@ jobs:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          # Only set this if the signing key actually has a passphrase. GitHub
+          # rejects empty secret values, so a passphrase-less key just omits it -
+          # the build defaults SIGNING_PASSWORD to "".
           SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
